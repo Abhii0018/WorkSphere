@@ -3,6 +3,13 @@
  * Tailored for Visartech (Technology & Digital Solutions)
  * Modern, crisp corporate design system
  */
+import { Platform } from 'react-native';
+
+export const fontStack = Platform.select({
+  ios: 'System',
+  android: 'sans-serif',
+  default: 'sans-serif',
+});
 
 export const colors = {
   // Brand Colors
@@ -77,6 +84,7 @@ export const spacing = {
 };
 
 export const typography = {
+  fontFamily: fontStack,
   // Font Sizes
   size: {
     xs: 12,
