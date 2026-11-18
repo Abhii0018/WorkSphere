@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VISARTECH_EMPLOYEES, COMPANY_INFO } from '../constants/company';
 import { generateSampleAttendance } from '../constants/sampleAttendance';
+import { attendanceApi } from '../services/api';
 import {
   getChicagoDateKey,
   formatChicagoTime,
@@ -140,6 +141,13 @@ export const AttendanceProvider = ({ children }) => {
 
     await saveRecords(updated);
 
+    // Sync to MongoDB
+    try {
+      await attendanceApi.checkIn(employeeId);
+    } catch (apiErr) {
+      console.warn('[AttendanceContext] MongoDB check-in sync failed:', apiErr.message);
+    }
+
     return {
       success: true,
       title: 'Check-In Successful',
@@ -193,6 +201,13 @@ export const AttendanceProvider = ({ children }) => {
     };
 
     await saveRecords(updated);
+
+    // Sync to MongoDB
+    try {
+      await attendanceApi.checkOut(employeeId);
+    } catch (apiErr) {
+      console.warn('[AttendanceContext] MongoDB check-out sync failed:', apiErr.message);
+    }
 
     return {
       success: true,

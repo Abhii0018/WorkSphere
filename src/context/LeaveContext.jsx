@@ -9,6 +9,7 @@ import {
   validateLeaveApplication,
 } from '../utils/leave.js';
 import { formatChicagoDate } from '../utils/attendance.js';
+import { leaveApi } from '../services/api.js';
 
 const STORAGE_KEY = '@worksphere_leave_v1';
 
@@ -33,10 +34,28 @@ export const LeaveProvider = ({ children }) => {
   const [leaveBalances, setLeaveBalances] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from AsyncStorage
+  // Load from MongoDB Atlas with fallback to AsyncStorage
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
+
+      // Try loading live leaves from MongoDB Atlas
+      try {
+        const res = await leaveApi.getAllLeaves();
+        if (res && res.success && res.data && res.data.length > 0) {
+          setLeaveRequests(res.data);
+          const initialBalances = generateSampleLeaveBalances();
+          setLeaveBalances(initialBalances);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+            requests: res.data,
+            balances: initialBalances,
+          }));
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('[LeaveContext] MongoDB API unavailable, falling back to local storage:', apiErr.message);
+      }
+
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsed = JSON.parse(savedData);
@@ -183,6 +202,20 @@ export const LeaveProvider = ({ children }) => {
     const updatedRequests = [newRequest, ...leaveRequests];
     await saveData(updatedRequests, leaveBalances);
 
+    // Sync to MongoDB
+    try {
+      await leaveApi.apply({
+        employeeId,
+        leaveType,
+        startDate,
+        endDate,
+        days: validation.days,
+        reason,
+      });
+    } catch (apiErr) {
+      console.warn('[LeaveContext] Sync leave application to MongoDB failed:', apiErr.message);
+    }
+
     return {
       success: true,
       message: `Leave application submitted for ${validation.days} ${validation.days === 1 ? 'day' : 'days'}. Status: Pending HR approval.`,
@@ -238,6 +271,17 @@ export const LeaveProvider = ({ children }) => {
 
     await saveData(updatedRequests, updatedBalances);
 
+    // Sync to MongoDB
+    try {
+      await leaveApi.updateStatus(requestId, {
+        status: 'Approved',
+        reviewNote: hrComment.trim() || 'Approved by HR Operations',
+        reviewedBy: 'Elena Rostova',
+      });
+    } catch (apiErr) {
+      console.warn('[LeaveContext] Sync approve to MongoDB failed:', apiErr.message);
+    }
+
     return {
       success: true,
       message: `Leave request approved for ${request.employeeName}. ${request.days} ${request.days === 1 ? 'day' : 'days'} deducted from ${request.leaveType}.`,
@@ -289,6 +333,17 @@ export const LeaveProvider = ({ children }) => {
 
     await saveData(updatedRequests, updatedBalances);
 
+    // Sync to MongoDB
+    try {
+      await leaveApi.updateStatus(requestId, {
+        status: 'Approved',
+        reviewNote: hrComment.trim() || 'Approved by HR Operations',
+        reviewedBy: 'Elena Rostova',
+      });
+    } catch (apiErr) {
+      console.warn('[LeaveContext] Sync approve to MongoDB failed:', apiErr.message);
+    }
+
     return {
       success: true,
       message: `Leave request for ${request.employeeName} has been rejected.`,
@@ -327,6 +382,17 @@ export const LeaveProvider = ({ children }) => {
 
     const updatedRequests = leaveRequests.filter((r) => r.id !== requestId);
     await saveData(updatedRequests, updatedBalances);
+
+    // Sync to MongoDB
+    try {
+      await leaveApi.updateStatus(requestId, {
+        status: 'Approved',
+        reviewNote: hrComment.trim() || 'Approved by HR Operations',
+        reviewedBy: 'Elena Rostova',
+      });
+    } catch (apiErr) {
+      console.warn('[LeaveContext] Sync approve to MongoDB failed:', apiErr.message);
+    }
 
     return {
       success: true,

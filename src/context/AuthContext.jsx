@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { USER_ROLES, VISARTECH_EMPLOYEES, VISARTECH_HR_ADMIN } from '../constants/company';
+import { employeeApi } from '../services/api';
 
 const DEMO_USERS = {
   [USER_ROLES.HR_ADMIN]: {
@@ -28,6 +29,25 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(USER_ROLES.HR_ADMIN);
   const [user, setUser] = useState(DEMO_USERS[USER_ROLES.HR_ADMIN]);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  // Sync current user profile from MongoDB Atlas
+  useEffect(() => {
+    async function syncUserFromMongo() {
+      try {
+        const empId = role === USER_ROLES.HR_ADMIN ? 'admin-001' : 'emp-101';
+        const res = await employeeApi.getById(empId);
+        if (res && res.success && res.data) {
+          setUser({
+            ...res.data,
+            company: 'Visartech',
+          });
+        }
+      } catch (e) {
+        // Fallback silently to initial user state
+      }
+    }
+    syncUserFromMongo();
+  }, [role]);
 
   const login = (selectedRole = USER_ROLES.HR_ADMIN) => {
     setRole(selectedRole);

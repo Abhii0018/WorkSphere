@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateSampleEmployees } from '../constants/sampleEmployees.js';
 import { USER_ROLES } from '../constants/company.js';
+import { employeeApi } from '../services/api.js';
 
 const STORAGE_KEY = '@worksphere_employees_v1';
 
@@ -21,10 +22,21 @@ export const EmployeeProvider = ({ children }) => {
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from AsyncStorage
+  // Load from MongoDB Atlas with fallback to AsyncStorage
   const loadEmployees = useCallback(async () => {
     try {
       setIsLoading(true);
+      try {
+        const res = await employeeApi.getAll();
+        if (res && res.success && res.data && res.data.length > 0) {
+          setEmployees(res.data);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('[EmployeeContext] MongoDB API unavailable, falling back to local storage:', apiErr.message);
+      }
+
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData) {
         setEmployees(JSON.parse(savedData));
@@ -177,6 +189,13 @@ export const EmployeeProvider = ({ children }) => {
     const updated = [...employees, newEmployee];
     await saveEmployees(updated);
 
+    // Sync to MongoDB
+    try {
+      await employeeApi.create(newEmployee);
+    } catch (apiErr) {
+      console.warn('[EmployeeContext] Sync add to MongoDB failed:', apiErr.message);
+    }
+
     return newEmployee;
   };
 
@@ -244,6 +263,13 @@ export const EmployeeProvider = ({ children }) => {
     const updated = [...employees];
     updated[index] = updatedEmployee;
     await saveEmployees(updated);
+
+    // Sync to MongoDB
+    try {
+      await employeeApi.update(id, updatedFields);
+    } catch (apiErr) {
+      console.warn('[EmployeeContext] Sync update to MongoDB failed:', apiErr.message);
+    }
 
     return updatedEmployee;
   };

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateSampleTasks } from '../constants/sampleTasks.js';
 import { TASK_STATUS, TASK_PRIORITY, isTaskOverdue, calculateCompletionRate } from '../utils/tasks.js';
+import { taskApi } from '../services/api.js';
 
 const STORAGE_KEY = '@worksphere_tasks_v1';
 
@@ -23,10 +24,22 @@ export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from AsyncStorage
+  // Load from MongoDB Atlas with fallback to AsyncStorage
   const loadTasks = useCallback(async () => {
     try {
       setIsLoading(true);
+
+      try {
+        const res = await taskApi.getAll();
+        if (res && res.success && res.data && res.data.length > 0) {
+          setTasks(res.data);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('[TaskContext] MongoDB API unavailable, falling back to local storage:', apiErr.message);
+      }
+
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData) {
         setTasks(JSON.parse(savedData));
@@ -113,6 +126,20 @@ export const TaskProvider = ({ children }) => {
     const updated = [newTask, ...tasks];
     await saveTasks(updated);
 
+    // Sync to MongoDB
+    try {
+      await taskApi.create({
+        title: newTask.title,
+        description: newTask.description,
+        assignedTo: newTask.assignedTo,
+        priority: newTask.priority,
+        dueDate: newTask.dueDate,
+        category: newTask.department,
+      });
+    } catch (apiErr) {
+      console.warn('[TaskContext] Sync task to MongoDB failed:', apiErr.message);
+    }
+
     return {
       success: true,
       message: `Task assigned to ${newTask.assignedToName} successfully.`,
@@ -137,6 +164,13 @@ export const TaskProvider = ({ children }) => {
     const updated = [...tasks];
     updated[index] = updatedTask;
     await saveTasks(updated);
+
+    // Sync to MongoDB
+    try {
+      await taskApi.updateStatus(taskId, newStatus);
+    } catch (apiErr) {
+      console.warn('[TaskContext] Sync task status to MongoDB failed:', apiErr.message);
+    }
 
     return {
       success: true,
@@ -169,6 +203,13 @@ export const TaskProvider = ({ children }) => {
     const updated = [...tasks];
     updated[index] = updatedTask;
     await saveTasks(updated);
+
+    // Sync to MongoDB
+    try {
+      await taskApi.updateStatus(taskId, newStatus);
+    } catch (apiErr) {
+      console.warn('[TaskContext] Sync task status to MongoDB failed:', apiErr.message);
+    }
 
     return {
       success: true,

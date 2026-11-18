@@ -11,6 +11,7 @@ import {
   PAYROLL_STATUS,
 } from '../utils/payroll.js';
 import { USER_ROLES } from '../constants/company.js';
+import { payrollApi } from '../services/api.js';
 
 const STORAGE_KEY = '@worksphere_payroll_v1';
 
@@ -31,10 +32,22 @@ export const PayrollProvider = ({ children }) => {
   const [payrollRecords, setPayrollRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from AsyncStorage
+  // Load from MongoDB Atlas with fallback to AsyncStorage
   const loadPayroll = useCallback(async () => {
     try {
       setIsLoading(true);
+
+      try {
+        const res = await payrollApi.getAll();
+        if (res && res.success && res.data && res.data.length > 0) {
+          setPayrollRecords(res.data);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('[PayrollContext] MongoDB API unavailable, falling back to local storage:', apiErr.message);
+      }
+
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData) {
         setPayrollRecords(JSON.parse(savedData));
@@ -172,6 +185,13 @@ export const PayrollProvider = ({ children }) => {
     const updated = [...newRecords, ...payrollRecords];
     await savePayroll(updated);
 
+    // Sync to MongoDB
+    try {
+      await payrollApi.generateMonthly(month);
+    } catch (apiErr) {
+      console.warn('[PayrollContext] Sync generate monthly to MongoDB failed:', apiErr.message);
+    }
+
     return {
       success: true,
       count: newRecords.length,
@@ -222,6 +242,13 @@ export const PayrollProvider = ({ children }) => {
     const updated = [...payrollRecords];
     updated[index] = updatedRecord;
     await savePayroll(updated);
+
+    // Sync to MongoDB
+    try {
+      await payrollApi.updateStatus(recordId, newStatus, updatedRecord.paymentMethod);
+    } catch (apiErr) {
+      console.warn('[PayrollContext] Sync payment status to MongoDB failed:', apiErr.message);
+    }
 
     return updatedRecord;
   };
