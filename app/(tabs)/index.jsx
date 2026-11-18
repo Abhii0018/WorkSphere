@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,31 +6,35 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../../src/constants/theme';
 import { COMPANY_INFO, USER_ROLES } from '../../src/constants/company';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useAttendance } from '../../src/context/AttendanceContext';
 import { formatDate } from '../../src/utils/formatting';
+import { calculateWorkingHours } from '../../src/utils/attendance';
 import { Card, Badge, Avatar, StatCard, Button } from '../../src/components';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, role, switchRole, isHrAdmin } = useAuth();
-  const [isCheckedIn, setIsCheckedIn] = useState(true);
+  const { getEmployeeTodayRecord, getAdminStatistics } = useAttendance();
 
-  const toggleCheckIn = () => {
-    setIsCheckedIn(!isCheckedIn);
-    Alert.alert(
-      !isCheckedIn ? 'Checked In' : 'Checked Out',
-      !isCheckedIn
-        ? 'You have checked in at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : 'You have successfully checked out. Have a great evening!',
-      [{ text: 'OK' }]
-    );
-  };
+  // Retrieve live attendance data
+  const employeeTodayRecord = getEmployeeTodayRecord(user?.id || 'emp-101');
+  const adminStats = getAdminStatistics();
+
+  const isCheckedIn = !!employeeTodayRecord?.checkIn;
+  const isCheckedOut = !!employeeTodayRecord?.checkOut;
+
+  // Calculate live working hours for employee
+  const currentWorkingHours = employeeTodayRecord?.workingHours
+    ? employeeTodayRecord.workingHours
+    : isCheckedIn && !isCheckedOut
+    ? `${calculateWorkingHours(employeeTodayRecord.checkIn, null).formatted} (active)`
+    : '--';
 
   const handleRoleToggle = () => {
     const nextRole = isHrAdmin ? USER_ROLES.EMPLOYEE : USER_ROLES.HR_ADMIN;
@@ -64,7 +68,9 @@ export default function DashboardScreen() {
               name={user?.name || 'Visartech'}
               size={48}
               showStatus
-              status={isCheckedIn ? 'active' : 'offline'}
+              status={isCheckedIn && !isCheckedOut ? 'active' : 'offline'}
+              backgroundColor={user?.avatarColor}
+              textColor="#FFFFFF"
             />
           </TouchableOpacity>
         </View>
@@ -103,64 +109,98 @@ export default function DashboardScreen() {
         </View>
 
         {isHrAdmin ? (
-          // HR Administrator KPI Stats
+          // ================= HR Administrator KPI Stats =================
           <View style={styles.statsGrid}>
             <View style={styles.statsRow}>
               <StatCard
                 title="Total Staff"
-                value={`${COMPANY_INFO.totalEmployees}`}
-                subtitle="Active headcount"
+                value={`${adminStats.totalEmployees}`}
+                subtitle="All monitored"
                 iconName="people"
                 iconColor={theme.colors.primary}
                 iconBgColor={theme.colors.primarySubtle}
+                onPress={() => router.push('/(tabs)/attendance')}
               />
               <StatCard
                 title="Attendance"
-                value="6/6"
-                subtitle="100% checked in"
+                value={`${adminStats.presentCount + adminStats.lateCount}/${adminStats.totalEmployees}`}
+                subtitle={`${adminStats.attendancePercentage}% present today`}
                 iconName="checkmark-done"
                 iconColor={theme.colors.success}
                 iconBgColor={theme.colors.successSubtle}
+                onPress={() => router.push('/(tabs)/attendance')}
               />
             </View>
             <View style={styles.statsRow}>
               <StatCard
-                title="Pending Leaves"
-                value="1"
-                subtitle="Requires review"
-                iconName="calendar"
+                title="Late Arrivals"
+                value={`${adminStats.lateCount}`}
+                subtitle="After 09:15 AM"
+                iconName="alert-circle"
                 iconColor={theme.colors.warning}
                 iconBgColor={theme.colors.warningSubtle}
+                onPress={() => router.push('/(tabs)/attendance')}
               />
               <StatCard
-                title="Active Tasks"
-                value="12"
-                subtitle="Current sprint"
-                iconName="clipboard"
-                iconColor={theme.colors.info}
-                iconBgColor={theme.colors.infoSubtle}
+                title="Absent Staff"
+                value={`${adminStats.absentCount}`}
+                subtitle="Approved / Unreported"
+                iconName="close-circle"
+                iconColor={theme.colors.danger}
+                iconBgColor={theme.colors.dangerSubtle}
+                onPress={() => router.push('/(tabs)/attendance')}
               />
             </View>
           </View>
         ) : (
-          // Employee KPI Stats
+          // ================= Employee KPI Stats =================
           <View style={styles.statsGrid}>
             <View style={styles.statsRow}>
               <StatCard
                 title="Today's Status"
-                value={isCheckedIn ? 'Present' : 'Out'}
-                subtitle={isCheckedIn ? 'In at 09:15 AM' : 'Checked out'}
+                value={
+                  isCheckedOut
+                    ? 'Completed'
+                    : isCheckedIn
+                    ? employeeTodayRecord?.status || 'Present'
+                    : 'Not In'
+                }
+                subtitle={
+                  isCheckedIn
+                    ? `In at ${employeeTodayRecord.checkInFormatted}`
+                    : 'Check-in pending'
+                }
                 iconName="timer-outline"
-                iconColor={isCheckedIn ? theme.colors.success : theme.colors.danger}
-                iconBgColor={isCheckedIn ? theme.colors.successSubtle : theme.colors.dangerSubtle}
+                iconColor={
+                  isCheckedOut
+                    ? theme.colors.info
+                    : isCheckedIn
+                    ? theme.colors.success
+                    : theme.colors.danger
+                }
+                iconBgColor={
+                  isCheckedOut
+                    ? theme.colors.infoSubtle
+                    : isCheckedIn
+                    ? theme.colors.successSubtle
+                    : theme.colors.dangerSubtle
+                }
+                onPress={() => router.push('/(tabs)/attendance')}
               />
               <StatCard
-                title="Attendance"
-                value="98%"
-                subtitle="Current month"
-                iconName="trending-up-outline"
+                title="Working Hours"
+                value={currentWorkingHours}
+                subtitle={
+                  isCheckedOut
+                    ? 'Shift ended'
+                    : isCheckedIn
+                    ? 'Time logged today'
+                    : 'Awaiting check-in'
+                }
+                iconName="hourglass-outline"
                 iconColor={theme.colors.primary}
                 iconBgColor={theme.colors.primarySubtle}
+                onPress={() => router.push('/(tabs)/attendance')}
               />
             </View>
             <View style={styles.statsRow}>
@@ -184,6 +224,52 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* Attendance Highlight / Action Banner */}
+        <Card style={styles.attendanceBanner} variant="elevated" padding="lg">
+          <View style={styles.attendanceBannerHeader}>
+            <View style={styles.attendanceIconCircle}>
+              <Ionicons name="time" size={24} color={theme.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.attendanceBannerTitle}>
+                {isHrAdmin ? 'Attendance Console' : "Today's Attendance"}
+              </Text>
+              <Text style={styles.attendanceBannerSub}>
+                {isHrAdmin
+                  ? `${adminStats.presentCount} Present • ${adminStats.lateCount} Late • ${adminStats.absentCount} Absent`
+                  : isCheckedOut
+                  ? `Shift completed (${employeeTodayRecord.workingHours} logged)`
+                  : isCheckedIn
+                  ? `Checked in at ${employeeTodayRecord.checkInFormatted} (Chicago Time)`
+                  : 'You have not checked in yet today'}
+              </Text>
+            </View>
+          </View>
+
+          <Button
+            title={
+              isHrAdmin
+                ? 'Open Attendance Console'
+                : !isCheckedIn
+                ? 'Check In Now'
+                : !isCheckedOut
+                ? 'Open Attendance / Check Out'
+                : 'View Attendance Records'
+            }
+            onPress={() => router.push('/(tabs)/attendance')}
+            variant={!isCheckedIn && !isHrAdmin ? 'primary' : 'outline'}
+            size="md"
+            rightIcon={
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color={!isCheckedIn && !isHrAdmin ? theme.colors.textInverse : theme.colors.primary}
+              />
+            }
+            style={styles.attendanceBtn}
+          />
+        </Card>
+
         {/* Quick Actions Card */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -193,27 +279,31 @@ export default function DashboardScreen() {
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               style={styles.actionItem}
-              onPress={toggleCheckIn}
+              onPress={() => router.push('/(tabs)/attendance')}
               activeOpacity={0.7}
             >
               <View
                 style={[
                   styles.actionIconBox,
                   {
-                    backgroundColor: isCheckedIn
+                    backgroundColor: isCheckedIn && !isCheckedOut
                       ? theme.colors.dangerSubtle
                       : theme.colors.successSubtle,
                   },
                 ]}
               >
                 <Ionicons
-                  name={isCheckedIn ? 'log-out-outline' : 'log-in-outline'}
+                  name={isCheckedIn && !isCheckedOut ? 'log-out-outline' : 'log-in-outline'}
                   size={24}
-                  color={isCheckedIn ? theme.colors.danger : theme.colors.success}
+                  color={isCheckedIn && !isCheckedOut ? theme.colors.danger : theme.colors.success}
                 />
               </View>
               <Text style={styles.actionLabel}>
-                {isCheckedIn ? 'Check Out' : 'Check In'}
+                {isHrAdmin
+                  ? 'Attendance'
+                  : isCheckedIn && !isCheckedOut
+                  ? 'Check Out'
+                  : 'Check In'}
               </Text>
             </TouchableOpacity>
 
@@ -239,7 +329,7 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               style={styles.actionItem}
-              onPress={() => router.push('/(tabs)/modules')}
+              onPress={() => router.push('/(tabs)/attendance')}
               activeOpacity={0.7}
             >
               <View
@@ -296,15 +386,14 @@ export default function DashboardScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.announcementTitle}>
-                Welcome to WorkSphere at Visartech
+                Attendance System Live (Chicago HQ)
               </Text>
-              <Text style={styles.announcementDate}>Visartech Operations • Today</Text>
+              <Text style={styles.announcementDate}>Visartech Operations • Active</Text>
             </View>
           </View>
           <Text style={styles.announcementBody}>
-            The initial mobile framework has been initialized on React Native & Expo SDK 58.
-            Attendance, leave approvals, payroll, and performance modules will connect
-            to Node.js & MongoDB in subsequent development phases.
+            The Attendance Management Module is now operational in America/Chicago local
+            time. Check in by 09:15 AM to record an on-time arrival.
           </Text>
         </Card>
 
@@ -432,12 +521,44 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   statsGrid: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   statsRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
     marginBottom: theme.spacing.xs,
+  },
+  attendanceBanner: {
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.xl,
+  },
+  attendanceBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  attendanceIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: theme.colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  attendanceBannerTitle: {
+    fontSize: theme.typography.size.md,
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.textPrimary,
+  },
+  attendanceBannerSub: {
+    fontSize: theme.typography.size.xs + 1,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  attendanceBtn: {
+    width: '100%',
   },
   actionsCard: {
     marginBottom: theme.spacing.xl,

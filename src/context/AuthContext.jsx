@@ -1,24 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
-import { USER_ROLES } from '../constants/company';
+import { USER_ROLES, VISARTECH_EMPLOYEES, VISARTECH_HR_ADMIN } from '../constants/company';
 
 const DEMO_USERS = {
   [USER_ROLES.HR_ADMIN]: {
-    id: 'hr-001',
-    name: 'Elena Rostova',
-    email: 'elena.rostova@visartech.com',
-    role: USER_ROLES.HR_ADMIN,
-    department: 'People & Operations',
-    title: 'Lead HR Manager',
+    ...VISARTECH_HR_ADMIN,
     company: 'Visartech',
     status: 'Active',
   },
   [USER_ROLES.EMPLOYEE]: {
-    id: 'emp-101',
-    name: 'Alex Turner',
-    email: 'alex.turner@visartech.com',
-    role: USER_ROLES.EMPLOYEE,
-    department: 'Digital Solutions Lab',
-    title: 'Senior Software Engineer',
+    ...VISARTECH_EMPLOYEES[0],
     company: 'Visartech',
     status: 'Active',
   },
@@ -31,10 +21,10 @@ export const AuthContext = createContext({
   login: () => {},
   logout: () => {},
   switchRole: () => {},
+  allEmployees: VISARTECH_EMPLOYEES,
 });
 
 export const AuthProvider = ({ children }) => {
-  // Pre-seed with default logged in demo user for immediate mobile testing
   const [role, setRole] = useState(USER_ROLES.HR_ADMIN);
   const [user, setUser] = useState(DEMO_USERS[USER_ROLES.HR_ADMIN]);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
@@ -66,6 +56,8 @@ export const AuthProvider = ({ children }) => {
         switchRole,
         isHrAdmin: role === USER_ROLES.HR_ADMIN,
         isEmployee: role === USER_ROLES.EMPLOYEE,
+        allEmployees: VISARTECH_EMPLOYEES,
+        hrAdmin: VISARTECH_HR_ADMIN,
       }}
     >
       {children}

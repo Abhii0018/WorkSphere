@@ -40,6 +40,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="attendance"
+        options={{
+          title: 'Attendance',
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons
+              name={focused ? 'time' : 'time-outline'}
+              size={size || 22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="modules"
         options={{
           title: 'Modules',

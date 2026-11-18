@@ -6,3 +6,6 @@ export { default as Badge } from './common/Badge';
 export { default as Avatar } from './common/Avatar';
 export { default as StatCard } from './common/StatCard';
 export { default as EmptyState } from './feedback/EmptyState';
+export { default as AttendanceCard } from './attendance/AttendanceCard';
+export { default as AttendanceHistoryList } from './attendance/AttendanceHistoryList';
+export { default as EmployeeAttendanceDetailModal } from './attendance/EmployeeAttendanceDetailModal';

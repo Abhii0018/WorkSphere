@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../../src/constants/theme';
 import { HR_MODULES, COMPANY_INFO } from '../../src/constants/company';
@@ -15,6 +16,7 @@ import { useAuth } from '../../src/hooks/useAuth';
 import { Card, Badge, Button } from '../../src/components';
 
 export default function ModulesScreen() {
+  const router = useRouter();
   const { role, isHrAdmin } = useAuth();
   const [selectedModule, setSelectedModule] = useState(null);
 
@@ -176,20 +178,42 @@ export default function ModulesScreen() {
               </View>
 
               <View style={styles.roadmapBox}>
-                <Text style={styles.roadmapHeading}>Phase Implementation:</Text>
+                <Text style={styles.roadmapHeading}>Implementation Status:</Text>
                 <Text style={styles.roadmapText}>
-                  Frontend UI screens and API endpoints for this module will be added
-                  in the designated phase according to the project plan.
+                  {selectedModule.id === 'attendance'
+                    ? 'The Attendance module is fully operational with live Chicago time check-in/out, persistence, and HR administration.'
+                    : 'Frontend UI screens and API endpoints for this module will be added in the designated phase according to the project plan.'}
                 </Text>
               </View>
 
-              <Button
-                title="Got it"
-                onPress={() => setSelectedModule(null)}
-                variant="primary"
-                size="md"
-                style={{ marginTop: theme.spacing.lg }}
-              />
+              {selectedModule.id === 'attendance' ? (
+                <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.lg }}>
+                  <Button
+                    title="Launch Attendance Console"
+                    onPress={() => {
+                      setSelectedModule(null);
+                      router.push('/(tabs)/attendance');
+                    }}
+                    variant="primary"
+                    size="md"
+                    rightIcon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+                  />
+                  <Button
+                    title="Close"
+                    onPress={() => setSelectedModule(null)}
+                    variant="outline"
+                    size="sm"
+                  />
+                </View>
+              ) : (
+                <Button
+                  title="Got it"
+                  onPress={() => setSelectedModule(null)}
+                  variant="primary"
+                  size="md"
+                  style={{ marginTop: theme.spacing.lg }}
+                />
+              )}
             </View>
           </View>
         </Modal>
