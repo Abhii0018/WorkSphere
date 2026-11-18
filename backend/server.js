@@ -10,6 +10,8 @@ const attendanceRoutes = require('./routes/attendance');
 const leaveRoutes = require('./routes/leaves');
 const taskRoutes = require('./routes/tasks');
 const payrollRoutes = require('./routes/payroll');
+const announcementRoutes = require('./routes/announcements');
+const feedbackRoutes = require('./routes/feedback');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -42,6 +44,8 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leaves', leaveRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // 404 Handler
 app.use((req, res) => {

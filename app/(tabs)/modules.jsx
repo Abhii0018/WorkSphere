@@ -45,6 +45,10 @@ export default function ModulesScreen() {
         return '/tasks';
       case 'payroll':
         return '/payroll';
+      case 'announcements':
+        return '/announcements';
+      case 'feedback':
+        return '/feedback';
       default:
         return null;
     }
@@ -62,6 +66,10 @@ export default function ModulesScreen() {
         return 'Launch Tasks & Performance';
       case 'payroll':
         return 'Launch Payroll Portal';
+      case 'announcements':
+        return 'Open Announcements';
+      case 'feedback':
+        return 'Open Feedback Portal';
       default:
         return 'Open Module';
     }
@@ -79,6 +87,10 @@ export default function ModulesScreen() {
         return 'Performance & Task Management is fully operational with task assignments, priority levels, status updates with completion notes, and measurable completion rate analytics.';
       case 'payroll':
         return 'Payroll Management is fully operational with Net Salary formulas, monthly batch generation, pending/paid lifecycle, and strict employee privacy isolation.';
+      case 'announcements':
+        return 'Internal Communication & Announcements is fully operational with company-wide notices, pin capabilities, and live MongoDB Atlas syncing.';
+      case 'feedback':
+        return 'Employee Feedback system is fully operational with 5-star satisfaction ratings, anonymous submissions, and executive HR response workflow.';
       default:
         return 'Frontend UI screens and API endpoints for this module will be added in the designated phase according to the project plan.';
     }

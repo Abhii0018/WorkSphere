@@ -121,4 +121,16 @@ export const payrollApi = {
   updateStructure: (employeeId, structure) => api.put(`/payroll/structure/${employeeId}`, structure),
 };
 
+export const announcementApi = {
+  getAll: () => api.get('/announcements'),
+  create: (data) => api.post('/announcements', data),
+  delete: (id) => api.delete(`/announcements/${id}`),
+};
+
+export const feedbackApi = {
+  getAll: (employeeId) => api.get(`/feedback${employeeId ? `?employeeId=${employeeId}` : ''}`),
+  submit: (data) => api.post('/feedback', data),
+  respond: (id, responseData) => api.put(`/feedback/${id}/respond`, responseData),
+};
+
 export default api;

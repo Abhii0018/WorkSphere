@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,6 +72,24 @@ export default function DashboardScreen() {
     ? `${calculateWorkingHours(employeeTodayRecord.checkIn, null).formatted} (active)`
     : '--';
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(12)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [role]);
+
   const handleRoleToggle = () => {
     const nextRole = isHrAdmin ? USER_ROLES.EMPLOYEE : USER_ROLES.HR_ADMIN;
     switchRole(nextRole);
@@ -97,6 +116,7 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         {/* ========================================================================= */}
         {/* 1. TOP BRAND & PROFILE HEADER */}
         {/* ========================================================================= */}
@@ -170,10 +190,15 @@ export default function DashboardScreen() {
         {/* ========================================================================= */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Workspaces & Portals</Text>
-          <Text style={styles.sectionSub}>5 Active Modules</Text>
+          <Text style={styles.sectionSub}>7 Active Modules (MongoDB Atlas)</Text>
         </View>
 
-        <View style={styles.quickTilesRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickTilesScroll}
+          style={{ marginBottom: SPACING.lg }}
+        >
           <TouchableOpacity
             style={styles.quickTile}
             onPress={() => router.push('/employees')}
@@ -233,7 +258,31 @@ export default function DashboardScreen() {
             <Text style={styles.tileLabel}>Leaves</Text>
             <Text style={styles.tileSub}>{hrLeaveStats.pendingCount} Pending</Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/announcements')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="megaphone" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.tileLabel}>Notices</Text>
+            <Text style={styles.tileSub}>Updates</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/feedback')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="chatbubbles" size={20} color={COLORS.success} />
+            </View>
+            <Text style={styles.tileLabel}>Feedback</Text>
+            <Text style={styles.tileSub}>Pulse</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* ========================================================================= */}
         {/* 4. REAL-TIME ATTENDANCE HERO BANNER */}
@@ -602,6 +651,7 @@ export default function DashboardScreen() {
             WorkSphere Mobile • Visartech Digital Solutions Inc.
           </Text>
         </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -751,18 +801,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  quickTilesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 6,
-    marginBottom: SPACING.lg,
+  quickTilesScroll: {
+    paddingRight: SPACING.lg,
+    gap: 10,
   },
   quickTile: {
-    flex: 1,
+    width: 86,
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',

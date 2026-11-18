@@ -224,7 +224,7 @@ export const HR_MODULES = [
     title: 'Announcements',
     description: 'Company-wide updates, events, and important push notifications',
     icon: 'megaphone-outline',
-    status: 'Planned',
+    status: 'Active',
     roles: [USER_ROLES.HR_ADMIN, USER_ROLES.EMPLOYEE],
   },
   {
@@ -232,7 +232,7 @@ export const HR_MODULES = [
     title: 'Employee Feedback',
     description: 'Anonymous suggestions, quarterly satisfaction pulses, and HR queries',
     icon: 'chatbubbles-outline',
-    status: 'Planned',
+    status: 'Active',
     roles: [USER_ROLES.HR_ADMIN, USER_ROLES.EMPLOYEE],
   },
 ];

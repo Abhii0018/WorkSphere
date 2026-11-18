@@ -7,6 +7,8 @@ const Attendance = require('./models/Attendance');
 const Leave = require('./models/Leave');
 const Task = require('./models/Task');
 const Payroll = require('./models/Payroll');
+const Announcement = require('./models/Announcement');
+const Feedback = require('./models/Feedback');
 
 const SEED_EMPLOYEES = [
   {
@@ -397,6 +399,78 @@ const SEED_PAYROLL = [
   },
 ];
 
+const SEED_ANNOUNCEMENTS = [
+  {
+    id: 'ann-001',
+    title: 'Welcome to Visartech WorkSphere 2.0 (Live MongoDB Atlas Integration)',
+    content: 'We are thrilled to launch our new real-time cloud HR management platform. All 6 team members can now access live attendance, leave approvals, task management, and payroll reports.',
+    category: 'Company Update',
+    priority: 'High',
+    postedBy: 'Elena Rostova (Lead HR Manager)',
+    date: '2026-03-18',
+    isPinned: true,
+  },
+  {
+    id: 'ann-002',
+    title: 'Visartech Quarterly All-Hands Meeting & Tech Showcase',
+    content: 'Join us this Friday at 3:00 PM CST in the Chicago Innovation Suite and virtual link. We will review Q1 milestones, demonstrate client architectures, and celebrate team achievements.',
+    category: 'Event',
+    priority: 'Normal',
+    postedBy: 'Elena Rostova (Lead HR Manager)',
+    date: '2026-03-17',
+    isPinned: true,
+  },
+  {
+    id: 'ann-003',
+    title: 'Updated Remote & Hybrid Work Protocol',
+    content: 'Please ensure your Chicago time daily check-ins and working hours are submitted accurately via WorkSphere. Flexible core hours remain 9:00 AM - 5:00 PM CST.',
+    category: 'Policy',
+    priority: 'Normal',
+    postedBy: 'Elena Rostova (Lead HR Manager)',
+    date: '2026-03-15',
+    isPinned: false,
+  },
+];
+
+const SEED_FEEDBACK = [
+  {
+    id: 'fbk-001',
+    employeeId: 'emp-101',
+    employeeName: 'Alex Turner',
+    category: 'Tools & Technology',
+    rating: 5,
+    message: 'The new mobile WorkSphere app is responsive and makes tracking daily Chicago check-ins seamless. Loving the cloud MongoDB sync.',
+    isAnonymous: false,
+    status: 'Addressed',
+    adminResponse: 'Thank you Alex! Great to have the engineering team satisfied with the workflow.',
+    respondedBy: 'Elena Rostova',
+    respondedAt: '2026-03-18',
+  },
+  {
+    id: 'fbk-002',
+    employeeId: 'emp-102',
+    employeeName: 'Sarah Jenkins',
+    category: 'Workplace & Culture',
+    rating: 5,
+    message: 'Can we schedule weekly UX critique sessions in the Chicago lab? Would love to share design tokens across teams.',
+    isAnonymous: false,
+    status: 'Addressed',
+    adminResponse: 'Approved. We will reserve Friday 11:00 AM for cross-team UI/UX sync.',
+    respondedBy: 'Elena Rostova',
+    respondedAt: '2026-03-17',
+  },
+  {
+    id: 'fbk-003',
+    employeeId: 'emp-103',
+    employeeName: 'Anonymous Employee',
+    category: 'Benefits & Policy',
+    rating: 4,
+    message: 'Suggestion to introduce a wellness stipend for gym memberships or ergonomic home office equipment.',
+    isAnonymous: true,
+    status: 'Submitted',
+  },
+];
+
 async function seedDatabase() {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI);
@@ -455,6 +529,26 @@ async function seedDatabase() {
       console.log(`Successfully seeded ${SEED_PAYROLL.length} payroll records!`);
     } else {
       console.log(`Payroll collection already has ${payCount} documents.`);
+    }
+
+    // Seed Announcements
+    const annCount = await Announcement.countDocuments();
+    if (annCount === 0) {
+      console.log('Seeding announcements...');
+      await Announcement.insertMany(SEED_ANNOUNCEMENTS);
+      console.log(`Successfully seeded ${SEED_ANNOUNCEMENTS.length} announcements!`);
+    } else {
+      console.log(`Announcement collection already has ${annCount} documents.`);
+    }
+
+    // Seed Feedback
+    const fbkCount = await Feedback.countDocuments();
+    if (fbkCount === 0) {
+      console.log('Seeding feedback...');
+      await Feedback.insertMany(SEED_FEEDBACK);
+      console.log(`Successfully seeded ${SEED_FEEDBACK.length} feedback items!`);
+    } else {
+      console.log(`Feedback collection already has ${fbkCount} documents.`);
     }
 
     console.log('🎉 MongoDB Atlas Seeding Completed Successfully!');
