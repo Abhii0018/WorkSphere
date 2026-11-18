@@ -32,5 +32,10 @@ export { default as PerformanceStatsCard } from './tasks/PerformanceStatsCard';
 // Payroll
 export { default as PayrollCard } from './payroll/PayrollCard';
 export { default as SalaryBreakdownCard } from './payroll/SalaryBreakdownCard';
+export { default as SalaryStructureCard } from './payroll/SalaryStructureCard';
+export { default as PayrollSummaryCard } from './payroll/PayrollSummaryCard';
+export { default as PayrollHistoryList } from './payroll/PayrollHistoryList';
 export { default as GeneratePayrollModal } from './payroll/GeneratePayrollModal';
+export { default as PayrollGenerationModal } from './payroll/PayrollGenerationModal';
 export { default as PayrollDetailModal } from './payroll/PayrollDetailModal';
+export { default as EditSalaryStructureModal } from './payroll/EditSalaryStructureModal';

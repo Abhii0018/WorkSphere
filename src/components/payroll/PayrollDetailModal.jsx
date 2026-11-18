@@ -10,24 +10,31 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants/theme.js';
-import { formatCurrency, formatMonthLabel, PAYROLL_STATUS } from '../../utils/payroll.js';
+import {
+  formatCurrency,
+  formatMonthLabel,
+  normalizeSalaryStructure,
+  PAYROLL_STATUS,
+} from '../../utils/payroll.js';
 
 export default function PayrollDetailModal({
   visible,
   payroll,
   onClose,
   isHrUser = false,
+  onUpdateStatus,
   onMarkPaid,
 }) {
   if (!payroll) return null;
 
   const [loading, setLoading] = useState(false);
   const isPaid = payroll.status === PAYROLL_STATUS.PAID;
+  const struct = normalizeSalaryStructure(payroll);
 
   const handleMarkPaid = () => {
     Alert.alert(
-      'Confirm Payment',
-      `Mark payslip for ${payroll.employeeName} (${formatMonthLabel(payroll.month)}) as PAID for amount ${formatCurrency(payroll.netSalary)}?`,
+      'Confirm Payment Approval',
+      `Approve and record payment for ${payroll.employeeName} for ${formatMonthLabel(payroll.month || payroll.payrollMonth)} in the amount of ${formatCurrency(payroll.netSalary)}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -35,12 +42,44 @@ export default function PayrollDetailModal({
           onPress: async () => {
             try {
               setLoading(true);
-              await onMarkPaid(payroll.id, {
-                paymentMethod: 'Direct Deposit',
-                paidDate: new Date().toISOString().split('T')[0],
-              });
-              Alert.alert('Success', 'Payroll record updated to Paid.');
-              onClose();
+              const handler = onMarkPaid || onUpdateStatus;
+              if (handler) {
+                await handler(payroll.id, PAYROLL_STATUS.PAID, {
+                  paymentMethod: 'Direct Deposit - Corporate Wire',
+                  paidDate: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }),
+                });
+                Alert.alert('Success', 'Payroll record marked as PAID.');
+                onClose();
+              }
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to update payroll.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMarkPending = () => {
+    Alert.alert(
+      'Revert to Pending',
+      `Revert payslip for ${payroll.employeeName} back to PENDING status?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revert to Pending',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const handler = onUpdateStatus || onMarkPaid;
+              if (handler) {
+                await handler(payroll.id, PAYROLL_STATUS.PENDING, {});
+                Alert.alert('Updated', 'Payroll status reverted to PENDING.');
+                onClose();
+              }
             } catch (err) {
               Alert.alert('Error', err.message || 'Failed to update payroll.');
             } finally {
@@ -60,7 +99,7 @@ export default function PayrollDetailModal({
           <View style={styles.header}>
             <View>
               <Text style={styles.headerTitle}>Official Payslip</Text>
-              <Text style={styles.headerSubtitle}>Visartech Technologies Inc.</Text>
+              <Text style={styles.headerSubtitle}>Visartech Technologies Inc. • Corporate Payroll</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={COLORS.textSecondary} />
@@ -71,7 +110,7 @@ export default function PayrollDetailModal({
             {/* Top Slip Info */}
             <View style={styles.payslipBanner}>
               <View>
-                <Text style={styles.slipMonth}>{formatMonthLabel(payroll.month)}</Text>
+                <Text style={styles.slipMonth}>{formatMonthLabel(payroll.month || payroll.payrollMonth)}</Text>
                 <Text style={styles.slipId}>Ref ID: {payroll.id}</Text>
               </View>
               <View
@@ -107,13 +146,25 @@ export default function PayrollDetailModal({
                 <Text style={styles.infoValue}>{payroll.employeeId}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Currency</Text>
-                <Text style={styles.infoValue}>USD ($)</Text>
+                <Text style={styles.infoLabel}>Department</Text>
+                <Text style={styles.infoValue}>{payroll.department || 'Visartech'}</Text>
               </View>
-              {isPaid && payroll.paidDate && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Pay Period</Text>
+                <Text style={styles.infoValue}>{formatMonthLabel(payroll.month || payroll.payrollMonth)}</Text>
+              </View>
+              {payroll.generatedDate && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Generated Date</Text>
+                  <Text style={styles.infoValue}>{payroll.generatedDate}</Text>
+                </View>
+              )}
+              {isPaid && (payroll.paidDate || payroll.paymentDate) && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Payment Date</Text>
-                  <Text style={[styles.infoValue, { color: COLORS.success }]}>{payroll.paidDate}</Text>
+                  <Text style={[styles.infoValue, { color: COLORS.success }]}>
+                    {payroll.paidDate || payroll.paymentDate}
+                  </Text>
                 </View>
               )}
               {isPaid && payroll.paymentMethod && (
@@ -125,75 +176,92 @@ export default function PayrollDetailModal({
             </View>
 
             {/* Earnings Section */}
-            <Text style={styles.sectionHeading}>Earnings</Text>
+            <Text style={styles.sectionHeading}>Earnings & Allowances</Text>
             <View style={styles.tableCard}>
               <View style={styles.tableRow}>
                 <Text style={styles.tableLabel}>Basic Salary</Text>
-                <Text style={styles.tableValue}>{formatCurrency(payroll.basicSalary)}</Text>
+                <Text style={styles.tableValue}>{formatCurrency(struct.basicSalary)}</Text>
               </View>
               <View style={styles.tableRow}>
-                <Text style={styles.tableLabel}>Standard Allowances</Text>
-                <Text style={styles.tableValue}>{formatCurrency(payroll.allowances)}</Text>
+                <Text style={styles.tableLabel}>House Rent Allowance (HRA)</Text>
+                <Text style={styles.tableValue}>{formatCurrency(struct.hra)}</Text>
               </View>
-              {payroll.bonuses > 0 && (
+              <View style={styles.tableRow}>
+                <Text style={styles.tableLabel}>Other Allowances (Utility / Travel)</Text>
+                <Text style={styles.tableValue}>{formatCurrency(struct.otherAllowances)}</Text>
+              </View>
+              {struct.bonus > 0 && (
                 <View style={styles.tableRow}>
-                  <Text style={styles.tableLabel}>Performance Bonuses</Text>
+                  <Text style={styles.tableLabel}>Performance Bonus</Text>
                   <Text style={[styles.tableValue, { color: COLORS.success }]}>
-                    +{formatCurrency(payroll.bonuses)}
+                    +{formatCurrency(struct.bonus)}
                   </Text>
                 </View>
               )}
               <View style={[styles.tableRow, styles.subtotalRow]}>
-                <Text style={styles.subtotalLabel}>Total Gross Earnings</Text>
-                <Text style={styles.subtotalValue}>{formatCurrency(payroll.grossSalary)}</Text>
+                <Text style={styles.subtotalLabel}>Total Gross Salary</Text>
+                <Text style={styles.subtotalValue}>{formatCurrency(struct.grossSalary)}</Text>
               </View>
             </View>
 
             {/* Deductions Section */}
-            <Text style={styles.sectionHeading}>Deductions</Text>
+            <Text style={styles.sectionHeading}>Deductions & Taxes</Text>
             <View style={styles.tableCard}>
               <View style={styles.tableRow}>
-                <Text style={styles.tableLabel}>Tax Withholdings & Benefits</Text>
+                <Text style={styles.tableLabel}>Federal/State Taxes & Benefits</Text>
                 <Text style={[styles.tableValue, { color: COLORS.danger }]}>
-                  -{formatCurrency(payroll.deductions)}
+                  -{formatCurrency(struct.deductions)}
                 </Text>
               </View>
               <View style={[styles.tableRow, styles.subtotalRow]}>
                 <Text style={styles.subtotalLabel}>Total Deductions</Text>
                 <Text style={[styles.subtotalValue, { color: COLORS.danger }]}>
-                  -{formatCurrency(payroll.deductions)}
+                  -{formatCurrency(struct.deductions)}
                 </Text>
               </View>
             </View>
 
             {/* Net Pay Callout */}
             <View style={styles.netHighlightBox}>
-              <Text style={styles.netLabel}>NET PAYABLE AMOUNT</Text>
+              <Text style={styles.netLabel}>NET DISBURSED AMOUNT</Text>
               <Text style={styles.netAmount}>{formatCurrency(payroll.netSalary)}</Text>
               <Text style={styles.netFormula}>
-                Gross ({formatCurrency(payroll.grossSalary)}) - Deductions ({formatCurrency(payroll.deductions)})
+                Gross ({formatCurrency(struct.grossSalary)}) - Deductions ({formatCurrency(struct.deductions)})
               </Text>
             </View>
 
-            {/* Disclaimer */}
+            {/* Prototype Disclaimer */}
             <Text style={styles.disclaimer}>
-              This is a computer-generated payslip issued by Visartech HR and does not require a physical signature. Contact HR Administrator for any tax exemption or payroll queries.
+              This is a prototype corporate payslip generated within Visartech WorkSphere. Payment status is a local system record for workflow simulation.
             </Text>
           </ScrollView>
 
-          {/* HR Action: Mark as Paid */}
-          {isHrUser && !isPaid && onMarkPaid && (
+          {/* HR Actions Footer */}
+          {isHrUser && (
             <View style={styles.footer}>
-              <TouchableOpacity
-                style={[styles.markPaidBtn, loading && styles.markPaidBtnDisabled]}
-                disabled={loading}
-                onPress={handleMarkPaid}
-              >
-                <Ionicons name="checkmark-done" size={18} color={COLORS.white} />
-                <Text style={styles.markPaidBtnText}>
-                  {loading ? 'Processing...' : 'Approve & Mark as Paid'}
-                </Text>
-              </TouchableOpacity>
+              {!isPaid ? (
+                <TouchableOpacity
+                  style={[styles.markPaidBtn, loading && styles.markPaidBtnDisabled]}
+                  disabled={loading}
+                  onPress={handleMarkPaid}
+                >
+                  <Ionicons name="checkmark-done" size={18} color={COLORS.white} />
+                  <Text style={styles.markPaidBtnText}>
+                    {loading ? 'Processing...' : 'Approve & Mark as Paid'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.revertBtn, loading && styles.markPaidBtnDisabled]}
+                  disabled={loading}
+                  onPress={handleMarkPending}
+                >
+                  <Ionicons name="arrow-undo-outline" size={18} color={COLORS.textPrimary} />
+                  <Text style={styles.revertBtnText}>
+                    {loading ? 'Processing...' : 'Revert to Pending'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -280,7 +348,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   infoLabel: {
     fontSize: 12,
@@ -292,7 +360,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginBottom: 6,
@@ -310,7 +378,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   tableLabel: {
     fontSize: 13,
@@ -380,6 +448,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.success,
     paddingVertical: 14,
     borderRadius: RADIUS.md,
+  },
+  revertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F1F3F5',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+  },
+  revertBtnText: {
+    color: COLORS.textPrimary,
+    fontWeight: '700',
+    fontSize: 14,
   },
   markPaidBtnDisabled: {
     backgroundColor: COLORS.disabled || '#ADB5BD',

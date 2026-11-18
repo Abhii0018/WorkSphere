@@ -19,7 +19,7 @@ import { useTasks } from '../../src/context/TaskContext';
 import { usePayroll } from '../../src/context/PayrollContext';
 import { formatDate } from '../../src/utils/formatting';
 import { calculateWorkingHours } from '../../src/utils/attendance';
-import { formatCurrency, formatMonthLabel } from '../../src/utils/payroll';
+import { formatCurrency, formatMonthLabel, getCurrentMonthKey } from '../../src/utils/payroll';
 import { Card, Badge, Avatar, StatCard, Button } from '../../src/components';
 
 export default function DashboardScreen() {
@@ -37,6 +37,7 @@ export default function DashboardScreen() {
   const { getMonthlyExpenditureStats, getPayrollForEmployee } = usePayroll();
 
   const employeeId = user?.id || 'emp-101';
+  const currentMonthKey = getCurrentMonthKey();
 
   // Retrieve live attendance data
   const employeeTodayRecord = getEmployeeTodayRecord(employeeId);
@@ -56,7 +57,7 @@ export default function DashboardScreen() {
   const pendingTasksCount = employeeTasks.filter((t) => t.status !== 'Completed').length;
 
   // Retrieve live payroll data
-  const hrExpenditureStats = getMonthlyExpenditureStats();
+  const hrExpenditureStats = getMonthlyExpenditureStats(currentMonthKey);
   const employeePayrolls = getPayrollForEmployee(employeeId, user?.id, user?.role);
   const latestPayroll = employeePayrolls[0] || null;
 
@@ -147,7 +148,7 @@ export default function DashboardScreen() {
           />
         </Card>
 
-        {/* KPI / Metric Stats Grid */}
+        {/* Section Header: Metrics */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Overview & Metrics</Text>
           <Badge
@@ -198,26 +199,6 @@ export default function DashboardScreen() {
                 iconColor={hrTaskStats.overdue > 0 ? theme.colors.danger : theme.colors.info}
                 iconBgColor={hrTaskStats.overdue > 0 ? theme.colors.dangerSubtle : theme.colors.infoSubtle}
                 onPress={() => router.push('/tasks')}
-              />
-            </View>
-            <View style={styles.statsRow}>
-              <StatCard
-                title="Total Payouts"
-                value={formatCurrency(hrExpenditureStats.totalNetSalary)}
-                subtitle={`${hrExpenditureStats.pendingCount} pending payment`}
-                iconName="card"
-                iconColor={theme.colors.primary}
-                iconBgColor={theme.colors.primarySubtle}
-                onPress={() => router.push('/payroll')}
-              />
-              <StatCard
-                title="Approved Leaves"
-                value={`${hrLeaveStats.approvedCount}`}
-                subtitle={`${hrLeaveStats.totalRequests} total requests`}
-                iconName="calendar"
-                iconColor={theme.colors.success}
-                iconBgColor={theme.colors.successSubtle}
-                onPress={() => router.push('/leave')}
               />
             </View>
           </View>
@@ -295,9 +276,90 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Employee Interactive Widgets: Tasks & Payroll */}
+        {/* ========================================================================= */}
+        {/* HR DASHBOARD: Dedicated Payroll Summary Cards & Shortcut */}
+        {/* ========================================================================= */}
+        {isHrAdmin && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Monthly Payroll Summary ({formatMonthLabel(currentMonthKey)})</Text>
+              <TouchableOpacity onPress={() => router.push('/payroll')}>
+                <Text style={styles.seeAllText}>Open Payroll →</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.payrollSummaryGrid}>
+              <View style={styles.statsRow}>
+                <StatCard
+                  title="Total Monthly Payroll"
+                  value={formatCurrency(hrExpenditureStats.totalNetSalary)}
+                  subtitle="Net Disbursal"
+                  iconName="card"
+                  iconColor={theme.colors.primary}
+                  iconBgColor={theme.colors.primarySubtle}
+                  onPress={() => router.push('/payroll')}
+                />
+                <StatCard
+                  title="Employees Included"
+                  value={`${hrExpenditureStats.totalEmployeesIncluded}`}
+                  subtitle="Active Payroll Staff"
+                  iconName="people"
+                  iconColor={theme.colors.info}
+                  iconBgColor={theme.colors.infoSubtle}
+                  onPress={() => router.push('/payroll')}
+                />
+              </View>
+              <View style={styles.statsRow}>
+                <StatCard
+                  title="Paid Payroll Amount"
+                  value={formatCurrency(hrExpenditureStats.paidPayrollAmount)}
+                  subtitle={`${hrExpenditureStats.paidCount} Disbursed`}
+                  iconName="checkmark-circle"
+                  iconColor={theme.colors.success}
+                  iconBgColor={theme.colors.successSubtle}
+                  onPress={() => router.push('/payroll')}
+                />
+                <StatCard
+                  title="Pending Payroll Amount"
+                  value={formatCurrency(hrExpenditureStats.pendingPayrollAmount)}
+                  subtitle={`${hrExpenditureStats.pendingCount} Awaiting Payment`}
+                  iconName="time"
+                  iconColor={theme.colors.warning}
+                  iconBgColor={theme.colors.warningSubtle}
+                  onPress={() => router.push('/payroll')}
+                />
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* ========================================================================= */}
+        {/* EMPLOYEE DASHBOARD: Latest Payroll Snapshot Card */}
+        {/* ========================================================================= */}
         {!isHrAdmin && (
           <>
+            {/* Payroll Snapshot Card */}
+            {latestPayroll && (
+              <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/payroll')}>
+                <View style={styles.widgetHeader}>
+                  <View style={[styles.widgetIconBox, { backgroundColor: '#EBFBEE' }]}>
+                    <Ionicons name="card" size={20} color={theme.colors.success} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.widgetTitle}>My Latest Payslip ({formatMonthLabel(latestPayroll.month || latestPayroll.payrollMonth)})</Text>
+                    <Text style={styles.widgetSubtitle}>
+                      Net Take-Home: {formatCurrency(latestPayroll.netSalary)} • Ref: {latestPayroll.id}
+                    </Text>
+                  </View>
+                  <Badge
+                    label={latestPayroll.status}
+                    variant={getStatusBadgeVariant(latestPayroll.status)}
+                    size="sm"
+                  />
+                </View>
+              </Card>
+            )}
+
             {/* Task Snapshot Card */}
             <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/tasks')}>
               <View style={styles.widgetHeader}>
@@ -317,28 +379,6 @@ export default function DashboardScreen() {
                 />
               </View>
             </Card>
-
-            {/* Payroll Snapshot Card */}
-            {latestPayroll && (
-              <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/payroll')}>
-                <View style={styles.widgetHeader}>
-                  <View style={[styles.widgetIconBox, { backgroundColor: '#EBFBEE' }]}>
-                    <Ionicons name="card" size={20} color={theme.colors.success} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.widgetTitle}>Latest Payslip ({formatMonthLabel(latestPayroll.month)})</Text>
-                    <Text style={styles.widgetSubtitle}>
-                      Net Pay: {formatCurrency(latestPayroll.netSalary)}
-                    </Text>
-                  </View>
-                  <Badge
-                    label={latestPayroll.status}
-                    variant={getStatusBadgeVariant(latestPayroll.status)}
-                    size="sm"
-                  />
-                </View>
-              </Card>
-            )}
 
             {/* Latest Leave Application Status */}
             {latestLeaveRequest && (
@@ -410,14 +450,35 @@ export default function DashboardScreen() {
           />
         </Card>
 
-        {/* Quick Actions Card */}
+        {/* Quick Access Modules */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quick Access Modules</Text>
         </View>
 
         <Card style={styles.actionsCard} variant="elevated" padding="md">
           <View style={styles.actionButtonsRow}>
-            {/* Quick Action 1: Employees Directory */}
+            {/* Quick Action 1: Payroll */}
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => router.push('/payroll')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.actionIconBox,
+                  { backgroundColor: '#EBFBEE' },
+                ]}
+              >
+                <Ionicons
+                  name="card-outline"
+                  size={24}
+                  color={theme.colors.success}
+                />
+              </View>
+              <Text style={styles.actionLabel}>{isHrAdmin ? 'Payroll' : 'My Payroll'}</Text>
+            </TouchableOpacity>
+
+            {/* Quick Action 2: Employees Directory */}
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => router.push('/employees')}
@@ -438,7 +499,7 @@ export default function DashboardScreen() {
               <Text style={styles.actionLabel}>Directory</Text>
             </TouchableOpacity>
 
-            {/* Quick Action 2: Tasks */}
+            {/* Quick Action 3: Tasks */}
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => router.push('/tasks')}
@@ -457,27 +518,6 @@ export default function DashboardScreen() {
                 />
               </View>
               <Text style={styles.actionLabel}>Tasks</Text>
-            </TouchableOpacity>
-
-            {/* Quick Action 3: Payroll */}
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => router.push('/payroll')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: '#EBFBEE' },
-                ]}
-              >
-                <Ionicons
-                  name="card-outline"
-                  size={24}
-                  color={theme.colors.success}
-                />
-              </View>
-              <Text style={styles.actionLabel}>Payroll</Text>
             </TouchableOpacity>
 
             {/* Quick Action 4: Leaves */}
@@ -520,13 +560,13 @@ export default function DashboardScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.announcementTitle}>
-                WorkSphere 5-Module Suite Live!
+                Payroll Management Active (Visartech)
               </Text>
               <Text style={styles.announcementDate}>Visartech Operations • Today</Text>
             </View>
           </View>
           <Text style={styles.announcementBody}>
-            Attendance, Leave Management, Employee Directory, Task Performance, and Payroll Management are fully operational across all 6 Visartech team members.
+            The Payroll Management module is now live! HR can generate monthly payroll runs, manage salary structures, and track disbursements. Employees can access their confidential payslips anytime.
           </Text>
         </Card>
 
@@ -541,7 +581,7 @@ export default function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.roadmapTitle}>Explore All HR Architecture</Text>
               <Text style={styles.roadmapSubtitle}>
-                5 active modules operational with unified employee profiles
+                5 operational modules with centralized employee records & local persistence
               </Text>
             </View>
             <Ionicons
@@ -653,7 +693,16 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.textPrimary,
   },
+  seeAllText: {
+    fontSize: theme.typography.size.xs + 1,
+    fontWeight: theme.typography.weight.semibold,
+    color: theme.colors.primary,
+  },
   statsGrid: {
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  payrollSummaryGrid: {
     marginBottom: theme.spacing.md,
     gap: theme.spacing.sm,
   },

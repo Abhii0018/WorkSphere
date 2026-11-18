@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateSamplePayrollRecords } from '../constants/samplePayroll.js';
-import { calculateNetSalary, getCurrentMonthKey, validateSalaryValues } from '../utils/payroll.js';
+import {
+  calculateGrossSalary,
+  calculateNetSalary,
+  getCurrentMonthKey,
+  generatePayrollId,
+  validateSalaryValues,
+  normalizeSalaryStructure,
+  PAYROLL_STATUS,
+} from '../utils/payroll.js';
 import { USER_ROLES } from '../constants/company.js';
 
 const STORAGE_KEY = '@worksphere_payroll_v1';
@@ -14,6 +22,7 @@ export const PayrollContext = createContext({
   updatePaymentStatus: async () => {},
   getPayrollForEmployee: () => [],
   getAllPayrollRecords: () => [],
+  getMonthlyExpenditureStats: () => ({}),
   getHrPayrollStats: () => ({}),
   resetPayrollData: async () => {},
 });
@@ -72,148 +81,92 @@ export const PayrollProvider = ({ children }) => {
   };
 
   /**
-   * Generate monthly payroll record for an individual employee (HR action)
+   * Generate monthly payroll records for all active employees or specific target.
+   * Can be called as:
+   * 1) generateMonthlyPayroll(month, employeesList, userRole)
+   * 2) generateMonthlyPayroll({ employee, month, userRole })
    */
-  const generateMonthlyPayroll = async ({
-    employee,
-    month = getCurrentMonthKey(),
-    customBreakdown = null,
-    userRole = USER_ROLES.HR_ADMIN,
-  }) => {
+  const generateMonthlyPayroll = async (arg1, arg2, arg3) => {
+    // Determine calling signature
+    let month = getCurrentMonthKey();
+    let employeesList = [];
+    let userRole = USER_ROLES.HR_ADMIN;
+
+    if (typeof arg1 === 'object' && arg1 !== null && !Array.isArray(arg1) && arg1.employee) {
+      // Single employee signature
+      const { employee, month: m = getCurrentMonthKey(), userRole: r = USER_ROLES.HR_ADMIN } = arg1;
+      month = m;
+      userRole = r;
+      employeesList = [employee];
+    } else {
+      // Batch signature: (month, employeesList, userRole)
+      month = arg1 || getCurrentMonthKey();
+      employeesList = Array.isArray(arg2) ? arg2 : [];
+      userRole = arg3 || USER_ROLES.HR_ADMIN;
+    }
+
     if (userRole !== USER_ROLES.HR_ADMIN) {
-      return { success: false, error: 'Permission Denied: Only HR Administrators can generate payroll.' };
+      throw new Error('Permission Denied: Only HR Administrators can generate payroll.');
     }
 
-    if (!employee || !employee.id) {
-      return { success: false, error: 'Valid employee reference required.' };
-    }
-
-    // Rule: Prevent duplicate payroll generation for the same employee and month
-    const existingRecord = payrollRecords.find(
-      (r) => r.employeeId === employee.id && r.month === month
-    );
-    if (existingRecord) {
-      return {
-        success: false,
-        error: `Payroll for ${employee.name} for ${month} has already been generated.`,
-      };
-    }
-
-    const basicSalary = Number(customBreakdown?.basic ?? employee.salary?.basic ?? 6000);
-    const allowances = Number(customBreakdown?.allowances ?? employee.salary?.allowances ?? 500);
-    const bonuses = Number(customBreakdown?.bonuses ?? employee.salary?.bonuses ?? 300);
-    const deductions = Number(customBreakdown?.deductions ?? employee.salary?.deductions ?? 400);
-
-    // Rule: Validate that salary values are non-negative
-    const validation = validateSalaryValues({
-      basic: basicSalary,
-      allowances,
-      bonuses,
-      deductions,
-    });
-    if (!validation.isValid) {
-      return { success: false, error: validation.error };
-    }
-
-    const netSalary = calculateNetSalary({
-      basic: basicSalary,
-      allowances,
-      bonuses,
-      deductions,
-    });
-
-    // Rule: Do not automatically mark payroll as Paid when generated (start as Pending)
-    const newRecord = {
-      id: `pay-${month}-${employee.id}`,
-      employeeId: employee.id,
-      employeeName: employee.name,
-      department: employee.department || 'Visartech',
-      title: employee.title || 'Staff Member',
-      month,
-      basicSalary,
-      allowances,
-      bonuses,
-      deductions,
-      netSalary,
-      status: 'Pending',
-      paymentDate: null,
-      paymentMethod: 'Direct Deposit',
-      generatedAt: new Date().toISOString(),
-      generatedBy: 'Elena Rostova (Lead HR Manager)',
-    };
-
-    const updated = [newRecord, ...payrollRecords];
-    await savePayroll(updated);
-
-    return {
-      success: true,
-      message: `Payroll for ${employee.name} for ${month} generated successfully ($${netSalary.toLocaleString()} Net).`,
-      record: newRecord,
-    };
-  };
-
-  /**
-   * Generate monthly payroll records for all active employees (HR action)
-   */
-  const generateCompanyMonthlyPayroll = async (
-    employeesList,
-    month = getCurrentMonthKey(),
-    userRole = USER_ROLES.HR_ADMIN
-  ) => {
-    if (userRole !== USER_ROLES.HR_ADMIN) {
-      return { success: false, error: 'Permission Denied: Only HR Administrators can generate company payroll.' };
+    if (!employeesList || employeesList.length === 0) {
+      throw new Error('No eligible employees provided for payroll generation.');
     }
 
     const newRecords = [];
-    let skippedCount = 0;
+    let duplicateCount = 0;
 
-    employeesList.forEach((emp) => {
-      if (emp.status === 'Inactive') return;
+    for (const emp of employeesList) {
+      // Skip inactive employees if batch
+      if (emp.status === 'Inactive') continue;
 
-      const exists = payrollRecords.some(
-        (r) => r.employeeId === emp.id && r.month === month
+      // Rule 1: Prevent duplicate payroll generation for the same employee and month
+      const existing = payrollRecords.find(
+        (r) => r.employeeId === emp.id && (r.month === month || r.payrollMonth === month)
       );
-      if (exists) {
-        skippedCount++;
-        return;
+      if (existing) {
+        duplicateCount++;
+        continue;
       }
 
-      const basicSalary = Number(emp.salary?.basic ?? 6000);
-      const allowances = Number(emp.salary?.allowances ?? 500);
-      const bonuses = Number(emp.salary?.bonuses ?? 300);
-      const deductions = Number(emp.salary?.deductions ?? 400);
-      const netSalary = calculateNetSalary({
-        basic: basicSalary,
-        allowances,
-        bonuses,
-        deductions,
-      });
+      const struct = normalizeSalaryStructure(emp.salaryConfig || emp.salary || {});
+      const validation = validateSalaryValues(struct);
+      if (!validation.isValid) {
+        throw new Error(`Invalid salary for ${emp.name}: ${validation.error}`);
+      }
 
-      newRecords.push({
-        id: `pay-${month}-${emp.id}`,
+      const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+
+      // Rule 3 & 4: Newly generated records must start with Pending status
+      const record = {
+        id: generatePayrollId(month, emp.id),
         employeeId: emp.id,
         employeeName: emp.name,
         department: emp.department || 'Visartech',
-        title: emp.title || 'Staff Member',
+        title: emp.title || emp.designation || 'Staff Member',
         month,
-        basicSalary,
-        allowances,
-        bonuses,
-        deductions,
-        netSalary,
-        status: 'Pending',
-        paymentDate: null,
-        paymentMethod: 'Direct Deposit',
+        payrollMonth: month,
+        basicSalary: struct.basicSalary,
+        hra: struct.hra,
+        otherAllowances: struct.otherAllowances,
+        allowances: struct.allowances,
+        bonus: struct.bonus,
+        deductions: struct.deductions,
+        grossSalary: struct.grossSalary,
+        netSalary: struct.netSalary,
+        status: PAYROLL_STATUS.PENDING,
         generatedAt: new Date().toISOString(),
-        generatedBy: 'Elena Rostova (Lead HR Manager)',
-      });
-    });
+        generatedDate: todayChicago,
+        paidDate: null,
+        paymentDate: null,
+        paymentMethod: null,
+      };
+
+      newRecords.push(record);
+    }
 
     if (newRecords.length === 0) {
-      return {
-        success: false,
-        error: `All active employees already have payroll records generated for ${month}.`,
-      };
+      throw new Error(`Payroll records for ${month} have already been generated for all active employees. Duplicate generation is prevented.`);
     }
 
     const updated = [...newRecords, ...payrollRecords];
@@ -221,57 +174,65 @@ export const PayrollProvider = ({ children }) => {
 
     return {
       success: true,
-      message: `Generated ${newRecords.length} payroll records for ${month}. (${skippedCount} already existed).`,
       count: newRecords.length,
+      records: newRecords,
+      duplicateCount,
     };
   };
 
   /**
-   * Update payment status (HR only)
+   * Alias for generateMonthlyPayroll batch
+   */
+  const generateCompanyMonthlyPayroll = async (employeesList, month, userRole) => {
+    return generateMonthlyPayroll(month, employeesList, userRole);
+  };
+
+  /**
+   * Update payment status (HR only: Mark as Paid or Pending)
    */
   const updatePaymentStatus = async (
     recordId,
-    newStatus,
-    paymentDate = null,
+    newStatus = PAYROLL_STATUS.PAID,
+    paymentDetails = {},
     userRole = USER_ROLES.HR_ADMIN
   ) => {
-    // Rule: Only HR can update payment status
+    // Rule 5: Only HR can update payment status
     if (userRole !== USER_ROLES.HR_ADMIN) {
-      return { success: false, error: 'Permission Denied: Only HR Administrators can update payment status.' };
+      throw new Error('Permission Denied: Only HR Administrators can mark payroll as Paid or Pending.');
     }
 
     const index = payrollRecords.findIndex((r) => r.id === recordId);
     if (index === -1) {
-      return { success: false, error: 'Payroll record not found.' };
+      throw new Error('Payroll record not found.');
     }
 
     const currentRecord = payrollRecords[index];
-    const isPaid = newStatus === 'Paid';
+    const isPaid = newStatus === PAYROLL_STATUS.PAID;
+    const todayChicago = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
+    // Rule 6: Record the payment date when HR marks payroll as Paid
     const updatedRecord = {
       ...currentRecord,
       status: newStatus,
-      paymentDate: isPaid ? (paymentDate || new Date().toISOString().split('T')[0]) : null,
+      paidDate: isPaid ? (paymentDetails.paidDate || paymentDetails.paymentDate || todayChicago) : null,
+      paymentDate: isPaid ? (paymentDetails.paidDate || paymentDetails.paymentDate || todayChicago) : null,
+      paymentMethod: isPaid ? (paymentDetails.paymentMethod || 'Direct Deposit - Corporate Wire') : null,
     };
 
     const updated = [...payrollRecords];
     updated[index] = updatedRecord;
     await savePayroll(updated);
 
-    return {
-      success: true,
-      message: `Payroll marked as ${newStatus} for ${currentRecord.employeeName}.`,
-      record: updatedRecord,
-    };
+    return updatedRecord;
   };
 
   /**
    * Get payroll for specific employee
-   * Rule: Employees must never see another employee's salary!
+   * Rule 9: Employees must only access their own payroll information.
    */
   const getPayrollForEmployee = useCallback(
     (targetEmployeeId, requestingUserId, requestingUserRole) => {
-      // If user is employee, strictly enforce that they can only access their own records
+      // If requesting user is Employee, strictly ensure targetEmployeeId === requestingUserId
       if (requestingUserRole === USER_ROLES.EMPLOYEE && requestingUserId !== targetEmployeeId) {
         return [];
       }
@@ -284,14 +245,25 @@ export const PayrollProvider = ({ children }) => {
   );
 
   /**
-   * Get all payroll records (HR only) with month and status filter
+   * Get all payroll records (HR only) with filtering
    */
   const getAllPayrollRecords = useCallback(
-    ({ month = 'ALL', status = 'ALL' } = {}) => {
+    ({ month = 'ALL', status = 'ALL', employeeId = 'ALL', search = '' } = {}) => {
+      const q = search.trim().toLowerCase();
+
       return payrollRecords
         .filter((r) => {
-          if (month !== 'ALL' && r.month !== month) return false;
+          if (month !== 'ALL' && r.month !== month && r.payrollMonth !== month) return false;
           if (status !== 'ALL' && r.status.toUpperCase() !== status.toUpperCase()) return false;
+          if (employeeId !== 'ALL' && r.employeeId !== employeeId) return false;
+
+          if (q) {
+            const matchName = r.employeeName?.toLowerCase().includes(q);
+            const matchId = r.employeeId?.toLowerCase().includes(q);
+            const matchDept = r.department?.toLowerCase().includes(q);
+            if (!matchName && !matchId && !matchDept) return false;
+          }
+
           return true;
         })
         .sort((a, b) => (b.month || '').localeCompare(a.month || ''));
@@ -300,34 +272,50 @@ export const PayrollProvider = ({ children }) => {
   );
 
   /**
-   * Company-wide payroll expenditure metrics for HR
+   * Calculate monthly payroll expenditure analytics for HR Dashboard Summary Cards:
+   * - Total monthly payroll
+   * - Total employees included in payroll
+   * - Paid payroll amount
+   * - Pending payroll amount
    */
-  const getHrPayrollStats = useCallback(
-    (month = getCurrentMonthKey()) => {
-      const monthRecords = payrollRecords.filter((r) => r.month === month);
-      const totalExpenditure = monthRecords.reduce((sum, r) => sum + r.netSalary, 0);
-      const totalPaid = monthRecords
-        .filter((r) => r.status === 'Paid')
-        .reduce((sum, r) => sum + r.netSalary, 0);
-      const totalPending = monthRecords
-        .filter((r) => r.status === 'Pending')
-        .reduce((sum, r) => sum + r.netSalary, 0);
+  const getMonthlyExpenditureStats = useCallback(
+    (monthKey) => {
+      const records = monthKey && monthKey !== 'ALL'
+        ? payrollRecords.filter((r) => r.month === monthKey || r.payrollMonth === monthKey)
+        : payrollRecords;
 
-      const paidCount = monthRecords.filter((r) => r.status === 'Paid').length;
-      const pendingCount = monthRecords.filter((r) => r.status === 'Pending').length;
+      const totalNetSalary = records.reduce((sum, r) => sum + (Number(r.netSalary) || 0), 0);
+      const totalGrossSalary = records.reduce((sum, r) => sum + (Number(r.grossSalary) || 0), 0);
+
+      const paidRecords = records.filter((r) => r.status === PAYROLL_STATUS.PAID);
+      const pendingRecords = records.filter((r) => r.status === PAYROLL_STATUS.PENDING);
+
+      const totalPaid = paidRecords.reduce((sum, r) => sum + (Number(r.netSalary) || 0), 0);
+      const totalPending = pendingRecords.reduce((sum, r) => sum + (Number(r.netSalary) || 0), 0);
+
+      // Distinct employees included
+      const employeesSet = new Set(records.map((r) => r.employeeId));
 
       return {
-        month,
-        recordCount: monthRecords.length,
-        totalExpenditure,
+        month: monthKey || 'ALL',
+        totalMonthlyPayroll: totalNetSalary,
+        totalNetSalary,
+        totalGrossSalary,
+        totalEmployees: employeesSet.size,
+        totalEmployeesIncluded: employeesSet.size,
+        paidPayrollAmount: totalPaid,
         totalPaid,
+        pendingPayrollAmount: totalPending,
         totalPending,
-        paidCount,
-        pendingCount,
+        paidCount: paidRecords.length,
+        pendingCount: pendingRecords.length,
+        totalRecords: records.length,
       };
     },
     [payrollRecords]
   );
+
+  const getHrPayrollStats = getMonthlyExpenditureStats;
 
   return (
     <PayrollContext.Provider
@@ -339,6 +327,7 @@ export const PayrollProvider = ({ children }) => {
         updatePaymentStatus,
         getPayrollForEmployee,
         getAllPayrollRecords,
+        getMonthlyExpenditureStats,
         getHrPayrollStats,
         resetPayrollData,
       }}

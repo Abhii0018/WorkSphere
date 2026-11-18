@@ -2,7 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../constants/theme.js';
-import { formatCurrency, formatMonthLabel, PAYROLL_STATUS } from '../../utils/payroll.js';
+import {
+  formatCurrency,
+  formatMonthLabel,
+  normalizeSalaryStructure,
+  PAYROLL_STATUS,
+} from '../../utils/payroll.js';
 
 export default function PayrollCard({
   payroll,
@@ -13,6 +18,8 @@ export default function PayrollCard({
   if (!payroll) return null;
 
   const isPaid = payroll.status === PAYROLL_STATUS.PAID;
+  const struct = normalizeSalaryStructure(payroll);
+  const monthKey = payroll.month || payroll.payrollMonth;
 
   return (
     <TouchableOpacity
@@ -23,7 +30,7 @@ export default function PayrollCard({
       <View style={styles.topRow}>
         <View style={styles.monthBadge}>
           <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
-          <Text style={styles.monthText}>{payroll.monthLabel || formatMonthLabel(payroll.month)}</Text>
+          <Text style={styles.monthText}>{formatMonthLabel(monthKey)}</Text>
         </View>
 
         <View
@@ -55,18 +62,18 @@ export default function PayrollCard({
           {isHrView ? (
             <>
               <Text style={styles.employeeName}>{payroll.employeeName}</Text>
-              <Text style={styles.employeeId}>{payroll.employeeId}</Text>
+              <Text style={styles.employeeId}>{payroll.employeeId} • {payroll.department}</Text>
             </>
           ) : (
             <>
-              <Text style={styles.netPayLabel}>Net Salary</Text>
-              <Text style={styles.payslipNumber}>ID: {payroll.id}</Text>
+              <Text style={styles.netPayLabel}>Net Take-Home</Text>
+              <Text style={styles.payslipNumber}>Ref: {payroll.id}</Text>
             </>
           )}
         </View>
         <View style={styles.amountCol}>
           <Text style={styles.netAmount}>{formatCurrency(payroll.netSalary)}</Text>
-          <Text style={styles.grossCaption}>Gross: {formatCurrency(payroll.grossSalary)}</Text>
+          <Text style={styles.grossCaption}>Gross: {formatCurrency(struct.grossSalary)}</Text>
         </View>
       </View>
 
@@ -74,21 +81,29 @@ export default function PayrollCard({
       <View style={styles.breakdownRow}>
         <View style={styles.breakdownPill}>
           <Text style={styles.pillLabel}>Basic</Text>
-          <Text style={styles.pillValue}>{formatCurrency(payroll.basicSalary)}</Text>
+          <Text style={styles.pillValue}>{formatCurrency(struct.basicSalary)}</Text>
         </View>
-        <View style={styles.breakdownPill}>
-          <Text style={styles.pillLabel}>Allowances</Text>
-          <Text style={styles.pillValue}>{formatCurrency(payroll.allowances)}</Text>
-        </View>
-        {payroll.bonuses > 0 && (
+        {struct.hra > 0 && (
+          <View style={styles.breakdownPill}>
+            <Text style={styles.pillLabel}>HRA</Text>
+            <Text style={styles.pillValue}>{formatCurrency(struct.hra)}</Text>
+          </View>
+        )}
+        {struct.otherAllowances > 0 && (
+          <View style={styles.breakdownPill}>
+            <Text style={styles.pillLabel}>Other All.</Text>
+            <Text style={styles.pillValue}>{formatCurrency(struct.otherAllowances)}</Text>
+          </View>
+        )}
+        {struct.bonus > 0 && (
           <View style={[styles.breakdownPill, { backgroundColor: '#EBFBEE' }]}>
             <Text style={[styles.pillLabel, { color: COLORS.success }]}>Bonus</Text>
-            <Text style={[styles.pillValue, { color: COLORS.success }]}>+{formatCurrency(payroll.bonuses)}</Text>
+            <Text style={[styles.pillValue, { color: COLORS.success }]}>+{formatCurrency(struct.bonus)}</Text>
           </View>
         )}
         <View style={[styles.breakdownPill, { backgroundColor: '#FFF5F5' }]}>
           <Text style={[styles.pillLabel, { color: COLORS.danger }]}>Deductions</Text>
-          <Text style={[styles.pillValue, { color: COLORS.danger }]}>-{formatCurrency(payroll.deductions)}</Text>
+          <Text style={[styles.pillValue, { color: COLORS.danger }]}>-{formatCurrency(struct.deductions)}</Text>
         </View>
       </View>
 
@@ -172,7 +187,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   employeeName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
@@ -197,7 +212,7 @@ const styles = StyleSheet.create({
   netAmount: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: COLORS.primary,
   },
   grossCaption: {
     fontSize: 11,

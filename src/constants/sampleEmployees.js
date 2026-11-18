@@ -4,13 +4,11 @@
  */
 
 import { VISARTECH_EMPLOYEES } from './company.js';
+import { normalizeSalaryStructure } from '../utils/payroll.js';
 
 export const generateSampleEmployees = () => {
   return VISARTECH_EMPLOYEES.map((emp) => {
-    const basic = emp.salary?.basic || 7000;
-    const allowances = emp.salary?.allowances || 800;
-    const bonuses = emp.salary?.bonuses || 500;
-    const deductions = emp.salary?.deductions || 600;
+    const normSalary = normalizeSalaryStructure(emp.salary);
 
     return {
       ...emp,
@@ -18,13 +16,8 @@ export const generateSampleEmployees = () => {
       designation: emp.title,
       joinDate: emp.joinDate || '2023-01-15',
       joiningDate: emp.joinDate || '2023-01-15',
-      salary: emp.salary,
-      salaryConfig: {
-        basicSalary: basic,
-        allowances,
-        bonuses,
-        deductions,
-      },
+      salary: normSalary,
+      salaryConfig: normSalary,
     };
   });
 };
