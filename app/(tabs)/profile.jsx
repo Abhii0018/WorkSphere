@@ -58,7 +58,7 @@ export default function ProfileScreen() {
               status="active"
             />
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
-            <Text style={styles.userTitle}>{user?.title || 'Team Member'}</Text>
+            <Text style={styles.userTitle}>{user?.title || user?.designation || 'Team Member'}</Text>
             <Badge
               label={role}
               variant={isHrAdmin ? 'hr' : 'employee'}
@@ -68,6 +68,12 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.divider} />
+
+          <View style={styles.detailRow}>
+            <Ionicons name="finger-print-outline" size={18} color={theme.colors.textMuted} />
+            <Text style={styles.detailLabel}>Employee ID</Text>
+            <Text style={styles.detailValue}>{user?.id || 'emp-101'}</Text>
+          </View>
 
           <View style={styles.detailRow}>
             <Ionicons name="mail-outline" size={18} color={theme.colors.textMuted} />
@@ -86,6 +92,87 @@ export default function ProfileScreen() {
             <Text style={styles.detailLabel}>Role Level</Text>
             <Text style={styles.detailValue}>{role}</Text>
           </View>
+        </Card>
+
+        {/* Quick Nav Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>My Workspace Hub</Text>
+        </View>
+
+        <Card style={styles.settingsCard} variant="outlined" padding="none">
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => router.push('/employees')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingsIconBox, { backgroundColor: theme.colors.primarySubtle }]}>
+              <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingsRowTitle}>Employee Directory & Profile</Text>
+              <Text style={styles.settingsRowSubtitle}>
+                {isHrAdmin ? 'Manage staff directory & profiles' : 'View directory & personal records'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => router.push('/tasks')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingsIconBox, { backgroundColor: theme.colors.infoSubtle }]}>
+              <Ionicons name="checkbox-outline" size={20} color={theme.colors.info} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingsRowTitle}>Tasks & Performance</Text>
+              <Text style={styles.settingsRowSubtitle}>
+                {isHrAdmin ? 'Task assignments & team metrics' : 'My assigned tasks & completion notes'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => router.push('/payroll')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingsIconBox, { backgroundColor: '#EBFBEE' }]}>
+              <Ionicons name="card-outline" size={20} color={theme.colors.success} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingsRowTitle}>Salary & Payslips</Text>
+              <Text style={styles.settingsRowSubtitle}>
+                {isHrAdmin ? 'Run payroll & track payments' : 'Private salary structure & official slips'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={() => router.push('/leave')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingsIconBox, { backgroundColor: theme.colors.warningSubtle }]}>
+              <Ionicons name="calendar-outline" size={20} color={theme.colors.warning} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingsRowTitle}>Leave Management</Text>
+              <Text style={styles.settingsRowSubtitle}>
+                {isHrAdmin ? 'Review employee leave applications' : 'Apply for leave & check balance'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </Card>
 
         {/* Company Overview Card */}
@@ -116,8 +203,8 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.compStatDivider} />
             <View style={styles.compStatBox}>
-              <Text style={styles.compStatVal}>8</Text>
-              <Text style={styles.compStatLabel}>Modules</Text>
+              <Text style={styles.compStatVal}>5/8</Text>
+              <Text style={styles.compStatLabel}>Active Modules</Text>
             </View>
           </View>
 
@@ -164,7 +251,7 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.settingsRowTitle}>System Specifications</Text>
               <Text style={styles.settingsRowSubtitle}>
-                Expo SDK 58, Router, Node backend blueprint
+                Expo SDK 58, 5 Integrated Modules, AsyncStorage
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
@@ -183,7 +270,7 @@ export default function ProfileScreen() {
         />
 
         <Text style={styles.versionNote}>
-          WorkSphere Mobile App • Phase 1 Initialization
+          WorkSphere Mobile App • Visartech HR Suite v1.2
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -201,11 +288,12 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xxxl,
   },
   profileCard: {
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xl,
   },
   avatarSection: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   userName: {
     fontSize: theme.typography.size.xl,
@@ -223,29 +311,27 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: theme.colors.borderLight,
     marginVertical: theme.spacing.md,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xs + 2,
+    paddingVertical: theme.spacing.xs,
   },
   detailLabel: {
-    fontSize: theme.typography.size.sm,
+    fontSize: theme.typography.size.xs + 1,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
-    width: 90,
+    flex: 1,
   },
   detailValue: {
-    flex: 1,
-    fontSize: theme.typography.size.sm,
+    fontSize: theme.typography.size.xs + 1,
     fontWeight: theme.typography.weight.semibold,
     color: theme.colors.textPrimary,
-    textAlign: 'right',
   },
   sectionHeader: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
     fontSize: theme.typography.size.md,
@@ -253,6 +339,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   companyCard: {
+    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xl,
   },
   companyHeader: {
@@ -261,16 +348,16 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   companyIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.md,
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primarySubtle,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: theme.spacing.md,
   },
   companyName: {
-    fontSize: theme.typography.size.md + 1,
+    fontSize: theme.typography.size.md,
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.textPrimary,
   },
@@ -282,14 +369,14 @@ const styles = StyleSheet.create({
   companyStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.md,
     paddingVertical: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   compStatBox: {
     alignItems: 'center',
-    flex: 1,
   },
   compStatVal: {
     fontSize: theme.typography.size.xl,
@@ -303,11 +390,12 @@ const styles = StyleSheet.create({
   },
   compStatDivider: {
     width: 1,
+    height: 30,
     backgroundColor: theme.colors.border,
   },
   companyFooter: {
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: theme.colors.borderLight,
     paddingTop: theme.spacing.sm,
   },
   industryText: {
@@ -327,10 +415,10 @@ const styles = StyleSheet.create({
   settingsIconBox: {
     width: 36,
     height: 36,
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.primarySubtle,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: theme.spacing.md,
   },
   settingsRowTitle: {
@@ -345,17 +433,16 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: theme.colors.border,
-    marginHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.borderLight,
+    marginLeft: 56,
   },
   signOutBtn: {
-    marginBottom: theme.spacing.lg,
     borderColor: theme.colors.danger,
+    marginBottom: theme.spacing.lg,
   },
   versionNote: {
-    textAlign: 'center',
     fontSize: theme.typography.size.xs,
     color: theme.colors.textMuted,
-    marginBottom: theme.spacing.md,
+    textAlign: 'center',
   },
 });

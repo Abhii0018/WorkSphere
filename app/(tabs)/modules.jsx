@@ -33,6 +33,57 @@ export default function ModulesScreen() {
     }
   };
 
+  const getModuleRoute = (moduleId) => {
+    switch (moduleId) {
+      case 'attendance':
+        return '/(tabs)/attendance';
+      case 'leave':
+        return '/leave';
+      case 'employees':
+        return '/employees';
+      case 'tasks':
+        return '/tasks';
+      case 'payroll':
+        return '/payroll';
+      default:
+        return null;
+    }
+  };
+
+  const getModuleLaunchTitle = (moduleId) => {
+    switch (moduleId) {
+      case 'attendance':
+        return 'Launch Attendance Console';
+      case 'leave':
+        return 'Launch Leave Portal';
+      case 'employees':
+        return 'Launch Employee Directory';
+      case 'tasks':
+        return 'Launch Tasks & Performance';
+      case 'payroll':
+        return 'Launch Payroll Portal';
+      default:
+        return 'Open Module';
+    }
+  };
+
+  const getModuleImplementationText = (moduleId) => {
+    switch (moduleId) {
+      case 'attendance':
+        return 'The Attendance module is fully operational with live Chicago time check-in/out, persistence, and HR administration.';
+      case 'leave':
+        return 'The Leave Management module is fully operational with entitlement balances, approval workflows, and Chicago date calculations.';
+      case 'employees':
+        return 'The Employee Management module is fully operational with searchable directory, add/edit modal, active/inactive status, and unified cross-module profile views.';
+      case 'tasks':
+        return 'Performance & Task Management is fully operational with task assignments, priority levels, status updates with completion notes, and measurable completion rate analytics.';
+      case 'payroll':
+        return 'Payroll Management is fully operational with Net Salary formulas, monthly batch generation, pending/paid lifecycle, and strict employee privacy isolation.';
+      default:
+        return 'Frontend UI screens and API endpoints for this module will be added in the designated phase according to the project plan.';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -58,10 +109,9 @@ export default function ModulesScreen() {
               style={{ marginRight: theme.spacing.sm }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>Modular Scaling Design</Text>
+              <Text style={styles.infoTitle}>Modular Architecture (5 Active Modules)</Text>
               <Text style={styles.infoDesc}>
-                Each module is structured to connect independently with the backend
-                Node/Express/MongoDB APIs in future phases.
+                Attendance, Leaves, Employees, Tasks, and Payroll are live with local state persistence and centralized employee synchronization.
               </Text>
             </View>
           </View>
@@ -71,6 +121,7 @@ export default function ModulesScreen() {
         <View style={styles.moduleList}>
           {HR_MODULES.map((item, index) => {
             const hasAccess = item.roles.includes(role);
+            const route = getModuleRoute(item.id);
 
             return (
               <Card
@@ -78,7 +129,13 @@ export default function ModulesScreen() {
                 style={[styles.moduleCard, !hasAccess && styles.moduleCardLocked]}
                 variant="elevated"
                 padding="md"
-                onPress={() => setSelectedModule(item)}
+                onPress={() => {
+                  if (route) {
+                    router.push(route);
+                  } else {
+                    setSelectedModule(item);
+                  }
+                }}
               >
                 <View style={styles.moduleTop}>
                   <View style={styles.iconAndTitle}>
@@ -113,11 +170,16 @@ export default function ModulesScreen() {
                       />
                     ))}
                   </View>
-                  <Badge
-                    label={item.status}
-                    variant={getStatusBadgeVariant(item.status)}
-                    size="sm"
-                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Badge
+                      label={item.status}
+                      variant={getStatusBadgeVariant(item.status)}
+                      size="sm"
+                    />
+                    {route && (
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                    )}
+                  </View>
                 </View>
               </Card>
             );
@@ -125,7 +187,7 @@ export default function ModulesScreen() {
         </View>
       </ScrollView>
 
-      {/* Module Detail Modal */}
+      {/* Module Detail Modal (for planned/info modules) */}
       {selectedModule && (
         <Modal
           animationType="fade"
@@ -180,20 +242,16 @@ export default function ModulesScreen() {
               <View style={styles.roadmapBox}>
                 <Text style={styles.roadmapHeading}>Implementation Status:</Text>
                 <Text style={styles.roadmapText}>
-                  {selectedModule.id === 'attendance'
-                    ? 'The Attendance module is fully operational with live Chicago time check-in/out, persistence, and HR administration.'
-                    : selectedModule.id === 'leave'
-                    ? 'The Leave Management module is fully operational with entitlement balances, approval workflows, and Chicago date calculations.'
-                    : 'Frontend UI screens and API endpoints for this module will be added in the designated phase according to the project plan.'}
+                  {getModuleImplementationText(selectedModule.id)}
                 </Text>
               </View>
 
-              {selectedModule.id === 'attendance' || selectedModule.id === 'leave' ? (
+              {getModuleRoute(selectedModule.id) ? (
                 <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.lg }}>
                   <Button
-                    title={selectedModule.id === 'attendance' ? 'Launch Attendance Console' : 'Launch Leave Portal'}
+                    title={getModuleLaunchTitle(selectedModule.id)}
                     onPress={() => {
-                      const targetRoute = selectedModule.id === 'attendance' ? '/(tabs)/attendance' : '/leave';
+                      const targetRoute = getModuleRoute(selectedModule.id);
                       setSelectedModule(null);
                       router.push(targetRoute);
                     }}
@@ -232,7 +290,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxxl,
   },
   header: {
@@ -244,13 +302,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   pageSubtitle: {
-    fontSize: theme.typography.size.sm,
+    fontSize: theme.typography.size.xs + 1,
     color: theme.colors.textSecondary,
     marginTop: 4,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   infoBanner: {
-    marginBottom: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    marginBottom: theme.spacing.lg,
   },
   infoRow: {
     flexDirection: 'row',
@@ -258,14 +319,14 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: theme.typography.size.sm,
-    fontWeight: theme.typography.weight.bold,
+    fontWeight: theme.typography.weight.semibold,
     color: theme.colors.textPrimary,
   },
   infoDesc: {
     fontSize: theme.typography.size.xs,
     color: theme.colors.textSecondary,
     marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   moduleList: {
     gap: theme.spacing.md,
@@ -274,7 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   moduleCardLocked: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   moduleTop: {
     marginBottom: theme.spacing.md,
@@ -286,10 +347,10 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 44,
     height: 44,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primarySubtle,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: theme.spacing.md,
   },
   titleWrapper: {
@@ -298,50 +359,54 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   moduleNumber: {
-    fontSize: theme.typography.size.sm,
+    fontSize: theme.typography.size.xs,
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.primary,
-    marginRight: 4,
+    marginRight: 6,
   },
   moduleTitle: {
     fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.bold,
+    fontWeight: theme.typography.weight.semibold,
     color: theme.colors.textPrimary,
+    flex: 1,
   },
   moduleDesc: {
     fontSize: theme.typography.size.xs + 1,
     color: theme.colors.textSecondary,
     lineHeight: 18,
-    marginTop: 2,
   },
   moduleFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: theme.colors.borderLight,
     paddingTop: theme.spacing.sm,
   },
   rolesRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
-    padding: theme.spacing.xl,
+    alignItems: 'center',
+    padding: theme.spacing.lg,
   },
   modalContent: {
+    width: '100%',
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.xl,
-    ...theme.shadows.lg,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -352,16 +417,16 @@ const styles = StyleSheet.create({
   modalIconBox: {
     width: 52,
     height: 52,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primarySubtle,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   modalCloseBtn: {
     padding: theme.spacing.xs,
   },
   modalTitle: {
-    fontSize: theme.typography.size.xl,
+    fontSize: theme.typography.size.lg,
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
@@ -369,31 +434,31 @@ const styles = StyleSheet.create({
   modalDesc: {
     fontSize: theme.typography.size.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: theme.spacing.lg,
+    lineHeight: 20,
+    marginBottom: theme.spacing.md,
   },
   modalMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: theme.spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
   },
   metaLabel: {
     fontSize: theme.typography.size.xs + 1,
-    fontWeight: theme.typography.weight.semibold,
+    fontWeight: theme.typography.weight.medium,
     color: theme.colors.textSecondary,
   },
   roadmapBox: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
     marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.sm,
   },
   roadmapHeading: {
     fontSize: theme.typography.size.xs + 1,
-    fontWeight: theme.typography.weight.bold,
+    fontWeight: theme.typography.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: 4,
   },
