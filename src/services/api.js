@@ -9,10 +9,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const LAN_IP = '10.224.16.129';
 const PORT = 5001;
 
-// Auto-select base URL depending on platform
+// Auto-select base URL depending on platform and environment
 const getBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
   if (Platform.OS === 'android') {
-    // 10.224.16.129 works for both physical Android devices on the Wi-Fi and emulators
     return `http://${LAN_IP}:${PORT}/api`;
   } else if (Platform.OS === 'ios') {
     return `http://${LAN_IP}:${PORT}/api`;
@@ -23,7 +25,17 @@ const getBaseUrl = () => {
 export const API_BASE_URL = getBaseUrl();
 
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  let activeBase = API_BASE_URL;
+  try {
+    const customUrl = await AsyncStorage.getItem('@worksphere_api_base_url');
+    if (customUrl && customUrl.trim().length > 0) {
+      activeBase = customUrl.trim();
+    }
+  } catch (e) {
+    // fallback to default
+  }
+
+  const url = `${activeBase}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   
   const headers = {
     'Content-Type': 'application/json',
