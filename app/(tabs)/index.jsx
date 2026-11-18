@@ -13,6 +13,7 @@ import theme from '../../src/constants/theme';
 import { COMPANY_INFO, USER_ROLES } from '../../src/constants/company';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useAttendance } from '../../src/context/AttendanceContext';
+import { useLeave } from '../../src/context/LeaveContext';
 import { formatDate } from '../../src/utils/formatting';
 import { calculateWorkingHours } from '../../src/utils/attendance';
 import { Card, Badge, Avatar, StatCard, Button } from '../../src/components';
@@ -21,10 +22,25 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user, role, switchRole, isHrAdmin } = useAuth();
   const { getEmployeeTodayRecord, getAdminStatistics } = useAttendance();
+  const {
+    getEmployeeBalance,
+    getEmployeeLeaveStats,
+    getEmployeeLeaveRequests,
+    getHrLeaveStats,
+  } = useLeave();
 
   // Retrieve live attendance data
   const employeeTodayRecord = getEmployeeTodayRecord(user?.id || 'emp-101');
   const adminStats = getAdminStatistics();
+
+  // Retrieve live leave data
+  const employeeId = user?.id || 'emp-101';
+  const employeeBalance = getEmployeeBalance(employeeId);
+  const employeeLeaveStats = getEmployeeLeaveStats(employeeId);
+  const employeeRequests = getEmployeeLeaveRequests(employeeId, 'ALL');
+  const latestLeaveRequest = employeeRequests[0] || null;
+
+  const hrLeaveStats = getHrLeaveStats();
 
   const isCheckedIn = !!employeeTodayRecord?.checkIn;
   const isCheckedOut = !!employeeTodayRecord?.checkOut;
@@ -39,6 +55,19 @@ export default function DashboardScreen() {
   const handleRoleToggle = () => {
     const nextRole = isHrAdmin ? USER_ROLES.EMPLOYEE : USER_ROLES.HR_ADMIN;
     switchRole(nextRole);
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status?.toUpperCase()) {
+      case 'APPROVED':
+        return 'success';
+      case 'PENDING':
+        return 'warning';
+      case 'REJECTED':
+        return 'danger';
+      default:
+        return 'neutral';
+    }
   };
 
   return (
@@ -133,22 +162,22 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.statsRow}>
               <StatCard
-                title="Late Arrivals"
-                value={`${adminStats.lateCount}`}
-                subtitle="After 09:15 AM"
-                iconName="alert-circle"
+                title="Pending Leaves"
+                value={`${hrLeaveStats.pendingCount}`}
+                subtitle="Requires HR review"
+                iconName="time"
                 iconColor={theme.colors.warning}
                 iconBgColor={theme.colors.warningSubtle}
-                onPress={() => router.push('/(tabs)/attendance')}
+                onPress={() => router.push('/leave')}
               />
               <StatCard
-                title="Absent Staff"
-                value={`${adminStats.absentCount}`}
-                subtitle="Approved / Unreported"
-                iconName="close-circle"
-                iconColor={theme.colors.danger}
-                iconBgColor={theme.colors.dangerSubtle}
-                onPress={() => router.push('/(tabs)/attendance')}
+                title="Approved Leaves"
+                value={`${hrLeaveStats.approvedCount}`}
+                subtitle={`${hrLeaveStats.totalRequests} total requests`}
+                iconName="calendar"
+                iconColor={theme.colors.info}
+                iconBgColor={theme.colors.infoSubtle}
+                onPress={() => router.push('/leave')}
               />
             </View>
           </View>
@@ -205,23 +234,47 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.statsRow}>
               <StatCard
-                title="Assigned Tasks"
-                value="4"
-                subtitle="2 due this week"
-                iconName="checkbox-outline"
-                iconColor={theme.colors.info}
-                iconBgColor={theme.colors.infoSubtle}
+                title="Leave Balance"
+                value={`${employeeBalance.totalRemaining}d`}
+                subtitle={`${employeeBalance.totalEntitled}d entitlement`}
+                iconName="leaf-outline"
+                iconColor={theme.colors.success}
+                iconBgColor={theme.colors.successSubtle}
+                onPress={() => router.push('/leave')}
               />
               <StatCard
-                title="Leave Balance"
-                value="14d"
-                subtitle="Annual leave left"
-                iconName="leaf-outline"
+                title="Pending Leaves"
+                value={`${employeeLeaveStats.pendingCount}`}
+                subtitle="Awaiting decision"
+                iconName="time-outline"
                 iconColor={theme.colors.warning}
                 iconBgColor={theme.colors.warningSubtle}
+                onPress={() => router.push('/leave')}
               />
             </View>
           </View>
+        )}
+
+        {/* Latest Leave Application Status (for Employee) */}
+        {!isHrAdmin && latestLeaveRequest && (
+          <Card style={styles.leaveStatusCard} variant="elevated" padding="md" onPress={() => router.push('/leave')}>
+            <View style={styles.leaveStatusHeader}>
+              <View style={styles.leaveStatusIconBox}>
+                <Ionicons name="calendar" size={20} color={theme.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.leaveStatusTitle}>Latest Leave Application</Text>
+                <Text style={styles.leaveStatusSub}>
+                  {latestLeaveRequest.leaveType} • {latestLeaveRequest.days} {latestLeaveRequest.days === 1 ? 'day' : 'days'} ({latestLeaveRequest.startDate})
+                </Text>
+              </View>
+              <Badge
+                label={latestLeaveRequest.status}
+                variant={getStatusBadgeVariant(latestLeaveRequest.status)}
+                size="sm"
+              />
+            </View>
+          </Card>
         )}
 
         {/* Attendance Highlight / Action Banner */}
@@ -277,6 +330,7 @@ export default function DashboardScreen() {
 
         <Card style={styles.actionsCard} variant="elevated" padding="md">
           <View style={styles.actionButtonsRow}>
+            {/* Quick Action 1: Attendance */}
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => router.push('/(tabs)/attendance')}
@@ -307,9 +361,10 @@ export default function DashboardScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Quick Action 2: Apply Leave / Leave Portal */}
             <TouchableOpacity
               style={styles.actionItem}
-              onPress={() => router.push('/(tabs)/modules')}
+              onPress={() => router.push('/leave')}
               activeOpacity={0.7}
             >
               <View
@@ -324,9 +379,12 @@ export default function DashboardScreen() {
                   color={theme.colors.primary}
                 />
               </View>
-              <Text style={styles.actionLabel}>Apply Leave</Text>
+              <Text style={styles.actionLabel}>
+                {isHrAdmin ? 'Leaves' : 'Apply Leave'}
+              </Text>
             </TouchableOpacity>
 
+            {/* Quick Action 3: Team */}
             <TouchableOpacity
               style={styles.actionItem}
               onPress={() => router.push('/(tabs)/attendance')}
@@ -347,9 +405,10 @@ export default function DashboardScreen() {
               <Text style={styles.actionLabel}>Team (6)</Text>
             </TouchableOpacity>
 
+            {/* Quick Action 4: Modules */}
             <TouchableOpacity
               style={styles.actionItem}
-              onPress={() => router.push('/modal')}
+              onPress={() => router.push('/(tabs)/modules')}
               activeOpacity={0.7}
             >
               <View
@@ -359,12 +418,12 @@ export default function DashboardScreen() {
                 ]}
               >
                 <Ionicons
-                  name="layers-outline"
+                  name="apps-outline"
                   size={24}
                   color={theme.colors.warning}
                 />
               </View>
-              <Text style={styles.actionLabel}>Roadmap</Text>
+              <Text style={styles.actionLabel}>Modules</Text>
             </TouchableOpacity>
           </View>
         </Card>
@@ -386,14 +445,14 @@ export default function DashboardScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.announcementTitle}>
-                Attendance System Live (Chicago HQ)
+                Leave Management Active (Visartech)
               </Text>
-              <Text style={styles.announcementDate}>Visartech Operations • Active</Text>
+              <Text style={styles.announcementDate}>Visartech Operations • Today</Text>
             </View>
           </View>
           <Text style={styles.announcementBody}>
-            The Attendance Management Module is now operational in America/Chicago local
-            time. Check in by 09:15 AM to record an on-time arrival.
+            The Leave Management module is now live! Employees can apply for Casual,
+            Sick, Annual, and Personal leave. All submissions are reviewed by HR.
           </Text>
         </Card>
 
@@ -408,7 +467,7 @@ export default function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.roadmapTitle}>View All 8 HR Modules</Text>
               <Text style={styles.roadmapSubtitle}>
-                Explore architecture, role permissions, and release status
+                Attendance and Leave modules are active and operational
               </Text>
             </View>
             <Ionicons
@@ -527,6 +586,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.md,
     marginBottom: theme.spacing.xs,
+  },
+  leaveStatusCard: {
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.lg,
+  },
+  leaveStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leaveStatusIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.primarySubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  leaveStatusTitle: {
+    fontSize: theme.typography.size.xs + 1,
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.textPrimary,
+  },
+  leaveStatusSub: {
+    fontSize: theme.typography.size.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   attendanceBanner: {
     backgroundColor: theme.colors.surface,

@@ -182,17 +182,20 @@ export default function ModulesScreen() {
                 <Text style={styles.roadmapText}>
                   {selectedModule.id === 'attendance'
                     ? 'The Attendance module is fully operational with live Chicago time check-in/out, persistence, and HR administration.'
+                    : selectedModule.id === 'leave'
+                    ? 'The Leave Management module is fully operational with entitlement balances, approval workflows, and Chicago date calculations.'
                     : 'Frontend UI screens and API endpoints for this module will be added in the designated phase according to the project plan.'}
                 </Text>
               </View>
 
-              {selectedModule.id === 'attendance' ? (
+              {selectedModule.id === 'attendance' || selectedModule.id === 'leave' ? (
                 <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.lg }}>
                   <Button
-                    title="Launch Attendance Console"
+                    title={selectedModule.id === 'attendance' ? 'Launch Attendance Console' : 'Launch Leave Portal'}
                     onPress={() => {
+                      const targetRoute = selectedModule.id === 'attendance' ? '/(tabs)/attendance' : '/leave';
                       setSelectedModule(null);
-                      router.push('/(tabs)/attendance');
+                      router.push(targetRoute);
                     }}
                     variant="primary"
                     size="md"

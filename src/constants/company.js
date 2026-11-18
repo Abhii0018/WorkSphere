@@ -124,9 +124,9 @@ export const HR_MODULES = [
   {
     id: 'leave',
     title: 'Leave Applications',
-    description: 'Request time off, approval workflows, and leave balance summary',
+    description: 'Request time off, approval workflows, and leave balance summary for 6 employees',
     icon: 'calendar-outline',
-    status: 'Planned',
+    status: 'Active',
     roles: [USER_ROLES.HR_ADMIN, USER_ROLES.EMPLOYEE],
   },
   {

@@ -9,3 +9,7 @@ export { default as EmptyState } from './feedback/EmptyState';
 export { default as AttendanceCard } from './attendance/AttendanceCard';
 export { default as AttendanceHistoryList } from './attendance/AttendanceHistoryList';
 export { default as EmployeeAttendanceDetailModal } from './attendance/EmployeeAttendanceDetailModal';
+export { default as LeaveBalanceCard } from './leave/LeaveBalanceCard';
+export { default as LeaveApplicationModal } from './leave/LeaveApplicationModal';
+export { default as LeaveHistoryList } from './leave/LeaveHistoryList';
+export { default as LeaveDetailModal } from './leave/LeaveDetailModal';
