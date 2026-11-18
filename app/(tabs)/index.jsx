@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import theme from '../../src/constants/theme';
+import theme, { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants/theme';
 import { COMPANY_INFO, USER_ROLES } from '../../src/constants/company';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useAttendance } from '../../src/context/AttendanceContext';
@@ -97,117 +97,279 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Bar */}
+        {/* ========================================================================= */}
+        {/* 1. TOP BRAND & PROFILE HEADER */}
+        {/* ========================================================================= */}
         <View style={styles.headerBar}>
           <View style={styles.headerLeft}>
-            <Text style={styles.dateText}>{formatDate()}</Text>
-            <Text style={styles.greetingText}>
-              Hello, {user?.name ? user.name.split(' ')[0] : 'Member'}
-            </Text>
-            <View style={styles.companyRow}>
-              <Text style={styles.companyName}>{COMPANY_INFO.name}</Text>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.companyIndustry}>{COMPANY_INFO.industry}</Text>
+            <View style={styles.brandRow}>
+              <View style={styles.brandBadge}>
+                <Ionicons name="business" size={12} color={COLORS.primary} />
+                <Text style={styles.brandBadgeText}>{COMPANY_INFO.name.toUpperCase()}</Text>
+              </View>
+              <Text style={styles.tzPill}>CHICAGO CST</Text>
             </View>
+
+            <Text style={styles.greetingText}>
+              Welcome back, <Text style={styles.greetingName}>{user?.name ? user.name.split(' ')[0] : 'Elena'}</Text>
+            </Text>
+            <Text style={styles.userRoleSubtitle}>
+              {user?.designation || user?.title || 'Administrator'} • {user?.department || 'Operations'}
+            </Text>
           </View>
+
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/profile')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
+            style={styles.avatarWrap}
           >
             <Avatar
               name={user?.name || 'Visartech'}
-              size={48}
+              size={50}
               showStatus
               status={isCheckedIn && !isCheckedOut ? 'active' : 'offline'}
-              backgroundColor={user?.avatarColor}
+              backgroundColor={user?.avatarColor || COLORS.primary}
               textColor="#FFFFFF"
             />
           </TouchableOpacity>
         </View>
 
-        {/* Role Bar & Switcher Banner */}
-        <Card style={styles.roleBanner} variant="outlined" padding="md">
-          <View style={styles.roleBannerLeft}>
-            <Ionicons
-              name={isHrAdmin ? 'shield-checkmark' : 'person-circle'}
-              size={22}
-              color={isHrAdmin ? theme.colors.roleHrAdmin : theme.colors.roleEmployee}
-            />
-            <View style={styles.roleInfo}>
-              <Text style={styles.roleLabel}>CURRENT VIEW</Text>
-              <Text style={styles.roleTitle}>{role}</Text>
+        {/* ========================================================================= */}
+        {/* 2. ROLE SWITCHER & ENVIRONMENT BAR */}
+        {/* ========================================================================= */}
+        <View style={styles.roleBar}>
+          <View style={styles.roleBarLeft}>
+            <View style={[styles.roleIconCircle, { backgroundColor: isHrAdmin ? '#F5F3FF' : '#EFF6FF' }]}>
+              <Ionicons
+                name={isHrAdmin ? 'shield-checkmark' : 'person'}
+                size={16}
+                color={isHrAdmin ? COLORS.roleHrAdmin : COLORS.primary}
+              />
+            </View>
+            <View>
+              <Text style={styles.roleLabel}>ACTIVE PERSPECTIVE</Text>
+              <Text style={styles.roleTitle}>
+                {isHrAdmin ? 'HR Administrator Console' : 'Employee Self-Service'}
+              </Text>
             </View>
           </View>
-          <Button
-            title={`Switch to ${isHrAdmin ? 'Employee' : 'HR Admin'}`}
+          <TouchableOpacity
+            style={styles.roleToggleBtn}
             onPress={handleRoleToggle}
-            variant="outline"
-            size="sm"
-            style={styles.switchBtn}
-            textStyle={styles.switchBtnText}
-          />
-        </Card>
+            activeOpacity={0.8}
+          >
+            <Ionicons name="swap-horizontal" size={14} color={COLORS.primary} />
+            <Text style={styles.roleToggleText}>
+              Switch to {isHrAdmin ? 'Employee' : 'HR Admin'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Section Header: Metrics */}
+        {/* ========================================================================= */}
+        {/* 3. QUICK NAVIGATION WORKSPACE TILES */}
+        {/* ========================================================================= */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Overview & Metrics</Text>
+          <Text style={styles.sectionTitle}>Workspaces & Portals</Text>
+          <Text style={styles.sectionSub}>5 Active Modules</Text>
+        </View>
+
+        <View style={styles.quickTilesRow}>
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/employees')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="people" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.tileLabel}>Directory</Text>
+            <Text style={styles.tileSub}>6 Staff</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/(tabs)/attendance')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="time" size={20} color={COLORS.success} />
+            </View>
+            <Text style={styles.tileLabel}>Attendance</Text>
+            <Text style={styles.tileSub}>{adminStats.attendancePercentage}% Today</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/tasks')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#F0F9FF' }]}>
+              <Ionicons name="checkbox" size={20} color="#0284C7" />
+            </View>
+            <Text style={styles.tileLabel}>Tasks</Text>
+            <Text style={styles.tileSub}>{hrTaskStats.total} Sprint</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/payroll')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#FAF5FF' }]}>
+              <Ionicons name="card" size={20} color="#7C3AED" />
+            </View>
+            <Text style={styles.tileLabel}>Payroll</Text>
+            <Text style={styles.tileSub}>USD ($)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickTile}
+            onPress={() => router.push('/leave')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.tileIconBox, { backgroundColor: '#FFFBEB' }]}>
+              <Ionicons name="calendar" size={20} color="#D97706" />
+            </View>
+            <Text style={styles.tileLabel}>Leaves</Text>
+            <Text style={styles.tileSub}>{hrLeaveStats.pendingCount} Pending</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ========================================================================= */}
+        {/* 4. REAL-TIME ATTENDANCE HERO BANNER */}
+        {/* ========================================================================= */}
+        <View style={styles.attendanceHeroCard}>
+          <View style={styles.attendanceHeroTop}>
+            <View style={styles.attendanceHeroIconCircle}>
+              <Ionicons name="time-outline" size={22} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.attendanceHeroHeading}>
+                {isHrAdmin ? 'Visartech Attendance Monitor' : "Today's Work Shift Attendance"}
+              </Text>
+              <Text style={styles.attendanceHeroSub}>
+                {isHrAdmin
+                  ? `${adminStats.presentCount} Present • ${adminStats.lateCount} Late • ${adminStats.absentCount} Absent`
+                  : isCheckedOut
+                  ? `Shift ended • ${employeeTodayRecord.workingHours} logged`
+                  : isCheckedIn
+                  ? `Active session • Checked in at ${employeeTodayRecord.checkInFormatted}`
+                  : 'Check-in pending for today'}
+              </Text>
+            </View>
+            <Badge
+              label={
+                isHrAdmin
+                  ? `${adminStats.attendancePercentage}% Present`
+                  : isCheckedOut
+                  ? 'Completed'
+                  : isCheckedIn
+                  ? 'In Office'
+                  : 'Pending'
+              }
+              variant={isCheckedIn || isHrAdmin ? 'success' : 'warning'}
+              size="sm"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.attendanceActionBtn,
+              !isCheckedIn && !isHrAdmin && { backgroundColor: COLORS.success },
+            ]}
+            onPress={() => router.push('/(tabs)/attendance')}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name={
+                isHrAdmin
+                  ? 'speedometer-outline'
+                  : !isCheckedIn
+                  ? 'log-in-outline'
+                  : !isCheckedOut
+                  ? 'log-out-outline'
+                  : 'eye-outline'
+              }
+              size={18}
+              color={COLORS.white}
+            />
+            <Text style={styles.attendanceActionBtnText}>
+              {isHrAdmin
+                ? 'Launch Attendance Console'
+                : !isCheckedIn
+                ? 'Check In Now'
+                : !isCheckedOut
+                ? 'Punch Out / View Records'
+                : 'View Shift Attendance History'}
+            </Text>
+            <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ========================================================================= */}
+        {/* 5. EXECUTIVE KPI METRICS GRID */}
+        {/* ========================================================================= */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {isHrAdmin ? 'Company Performance & Metrics' : 'Personal Workspace KPIs'}
+          </Text>
           <Badge
-            label={isHrAdmin ? 'Company Scope' : 'My Workspace'}
+            label={isHrAdmin ? 'Visartech Enterprise' : 'My Account'}
             variant="neutral"
             size="sm"
           />
         </View>
 
         {isHrAdmin ? (
-          // ================= HR Administrator KPI Stats =================
-          <View style={styles.statsGrid}>
-            <View style={styles.statsRow}>
+          /* HR Administrator 4-tile KPI Grid */
+          <View style={styles.kpiGrid}>
+            <View style={styles.kpiRow}>
               <StatCard
-                title="Active Staff"
+                title="Active Headcount"
                 value={`${activeEmployees.length}/${employees.length}`}
-                subtitle="Employee Directory"
+                subtitle="Monitored Staff"
                 iconName="people"
-                iconColor={theme.colors.primary}
-                iconBgColor={theme.colors.primarySubtle}
+                iconColor={COLORS.primary}
+                iconBgColor="#EFF6FF"
                 onPress={() => router.push('/employees')}
               />
               <StatCard
-                title="Attendance"
-                value={`${adminStats.presentCount + adminStats.lateCount}/${adminStats.totalEmployees}`}
-                subtitle={`${adminStats.attendancePercentage}% present today`}
+                title="Attendance Rate"
+                value={`${adminStats.attendancePercentage}%`}
+                subtitle={`${adminStats.presentCount + adminStats.lateCount} of 6 Present`}
                 iconName="checkmark-done"
-                iconColor={theme.colors.success}
-                iconBgColor={theme.colors.successSubtle}
+                iconColor={COLORS.success}
+                iconBgColor="#ECFDF5"
                 onPress={() => router.push('/(tabs)/attendance')}
               />
             </View>
-            <View style={styles.statsRow}>
+            <View style={styles.kpiRow}>
               <StatCard
                 title="Pending Leaves"
                 value={`${hrLeaveStats.pendingCount}`}
-                subtitle="Requires HR review"
+                subtitle="Awaiting Review"
                 iconName="time"
-                iconColor={theme.colors.warning}
-                iconBgColor={theme.colors.warningSubtle}
+                iconColor={COLORS.warning}
+                iconBgColor="#FFFBEB"
                 onPress={() => router.push('/leave')}
               />
               <StatCard
-                title="Team Tasks"
+                title="Sprint Delivery"
                 value={`${hrTaskStats.completionRate}%`}
-                subtitle={`${hrTaskStats.overdue} overdue • ${hrTaskStats.total} total`}
+                subtitle={`${hrTaskStats.overdue} Overdue • ${hrTaskStats.total} Tasks`}
                 iconName="checkbox"
-                iconColor={hrTaskStats.overdue > 0 ? theme.colors.danger : theme.colors.info}
-                iconBgColor={hrTaskStats.overdue > 0 ? theme.colors.dangerSubtle : theme.colors.infoSubtle}
+                iconColor={hrTaskStats.overdue > 0 ? COLORS.danger : COLORS.info}
+                iconBgColor={hrTaskStats.overdue > 0 ? '#FEF2F2' : '#F0F9FF'}
                 onPress={() => router.push('/tasks')}
               />
             </View>
           </View>
         ) : (
-          // ================= Employee KPI Stats =================
-          <View style={styles.statsGrid}>
-            <View style={styles.statsRow}>
+          /* Employee 4-tile KPI Grid */
+          <View style={styles.kpiGrid}>
+            <View style={styles.kpiRow}>
               <StatCard
-                title="Today's Status"
+                title="Today's Shift"
                 value={
                   isCheckedOut
                     ? 'Completed'
@@ -218,58 +380,40 @@ export default function DashboardScreen() {
                 subtitle={
                   isCheckedIn
                     ? `In at ${employeeTodayRecord.checkInFormatted}`
-                    : 'Check-in pending'
+                    : 'Awaiting check-in'
                 }
                 iconName="timer-outline"
-                iconColor={
-                  isCheckedOut
-                    ? theme.colors.info
-                    : isCheckedIn
-                    ? theme.colors.success
-                    : theme.colors.danger
-                }
-                iconBgColor={
-                  isCheckedOut
-                    ? theme.colors.infoSubtle
-                    : isCheckedIn
-                    ? theme.colors.successSubtle
-                    : theme.colors.dangerSubtle
-                }
+                iconColor={isCheckedIn ? COLORS.success : COLORS.danger}
+                iconBgColor={isCheckedIn ? '#ECFDF5' : '#FEF2F2'}
                 onPress={() => router.push('/(tabs)/attendance')}
               />
               <StatCard
-                title="Working Hours"
+                title="Hours Logged"
                 value={currentWorkingHours}
-                subtitle={
-                  isCheckedOut
-                    ? 'Shift ended'
-                    : isCheckedIn
-                    ? 'Time logged today'
-                    : 'Awaiting check-in'
-                }
+                subtitle={isCheckedOut ? 'Shift ended' : isCheckedIn ? 'Recorded today' : 'No time logged'}
                 iconName="hourglass-outline"
-                iconColor={theme.colors.primary}
-                iconBgColor={theme.colors.primarySubtle}
+                iconColor={COLORS.primary}
+                iconBgColor="#EFF6FF"
                 onPress={() => router.push('/(tabs)/attendance')}
               />
             </View>
-            <View style={styles.statsRow}>
+            <View style={styles.kpiRow}>
               <StatCard
-                title="My Tasks"
+                title="Assigned Tasks"
                 value={`${empTaskStats.completed}/${empTaskStats.total}`}
-                subtitle={`${empTaskStats.completionRate}% completion rate`}
+                subtitle={`${empTaskStats.completionRate}% Done • ${empTaskStats.overdue} Overdue`}
                 iconName="checkbox-outline"
-                iconColor={empTaskStats.overdue > 0 ? theme.colors.danger : theme.colors.primary}
-                iconBgColor={empTaskStats.overdue > 0 ? theme.colors.dangerSubtle : theme.colors.primarySubtle}
+                iconColor={empTaskStats.overdue > 0 ? COLORS.danger : COLORS.info}
+                iconBgColor={empTaskStats.overdue > 0 ? '#FEF2F2' : '#F0F9FF'}
                 onPress={() => router.push('/tasks')}
               />
               <StatCard
-                title="Leave Balance"
+                title="Leave Remaining"
                 value={`${employeeBalance.totalRemaining}d`}
-                subtitle={`${employeeBalance.totalEntitled}d entitlement`}
+                subtitle={`${employeeBalance.totalEntitled}d Yearly Entitlement`}
                 iconName="leaf-outline"
-                iconColor={theme.colors.success}
-                iconBgColor={theme.colors.successSubtle}
+                iconColor={COLORS.success}
+                iconBgColor="#ECFDF5"
                 onPress={() => router.push('/leave')}
               />
             </View>
@@ -277,78 +421,88 @@ export default function DashboardScreen() {
         )}
 
         {/* ========================================================================= */}
-        {/* HR DASHBOARD: Dedicated Payroll Summary Cards & Shortcut */}
+        {/* 6. HR PAYROLL EXPENDITURE & SUMMARY CARDS (SECTION 3 SPECIFICATION) */}
         {/* ========================================================================= */}
         {isHrAdmin && (
-          <>
+          <View style={styles.payrollSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Monthly Payroll Summary ({formatMonthLabel(currentMonthKey)})</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Monthly Payroll Expenditure</Text>
+                <Text style={styles.sectionSub}>{formatMonthLabel(currentMonthKey)} Run</Text>
+              </View>
               <TouchableOpacity onPress={() => router.push('/payroll')}>
-                <Text style={styles.seeAllText}>Open Payroll →</Text>
+                <Text style={styles.seeAllText}>Open Payroll Hub →</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.payrollSummaryGrid}>
-              <View style={styles.statsRow}>
+            <View style={styles.payrollGrid}>
+              <View style={styles.kpiRow}>
                 <StatCard
                   title="Total Monthly Payroll"
                   value={formatCurrency(hrExpenditureStats.totalNetSalary)}
-                  subtitle="Net Disbursal"
-                  iconName="card"
-                  iconColor={theme.colors.primary}
-                  iconBgColor={theme.colors.primarySubtle}
+                  subtitle="Net Disbursal Budget"
+                  iconName="cash-outline"
+                  iconColor={COLORS.primary}
+                  iconBgColor="#EFF6FF"
                   onPress={() => router.push('/payroll')}
                 />
                 <StatCard
-                  title="Employees Included"
+                  title="Payroll Staff"
                   value={`${hrExpenditureStats.totalEmployeesIncluded}`}
-                  subtitle="Active Payroll Staff"
-                  iconName="people"
-                  iconColor={theme.colors.info}
-                  iconBgColor={theme.colors.infoSubtle}
+                  subtitle="Employees Enrolled"
+                  iconName="people-outline"
+                  iconColor={COLORS.info}
+                  iconBgColor="#F0F9FF"
                   onPress={() => router.push('/payroll')}
                 />
               </View>
-              <View style={styles.statsRow}>
+
+              <View style={styles.kpiRow}>
                 <StatCard
                   title="Paid Payroll Amount"
                   value={formatCurrency(hrExpenditureStats.paidPayrollAmount)}
                   subtitle={`${hrExpenditureStats.paidCount} Disbursed`}
-                  iconName="checkmark-circle"
-                  iconColor={theme.colors.success}
-                  iconBgColor={theme.colors.successSubtle}
+                  iconName="checkmark-circle-outline"
+                  iconColor={COLORS.success}
+                  iconBgColor="#ECFDF5"
                   onPress={() => router.push('/payroll')}
                 />
                 <StatCard
                   title="Pending Payroll Amount"
                   value={formatCurrency(hrExpenditureStats.pendingPayrollAmount)}
                   subtitle={`${hrExpenditureStats.pendingCount} Awaiting Payment`}
-                  iconName="time"
-                  iconColor={theme.colors.warning}
-                  iconBgColor={theme.colors.warningSubtle}
+                  iconName="time-outline"
+                  iconColor={COLORS.warning}
+                  iconBgColor="#FFFBEB"
                   onPress={() => router.push('/payroll')}
                 />
               </View>
             </View>
-          </>
+          </View>
         )}
 
         {/* ========================================================================= */}
-        {/* EMPLOYEE DASHBOARD: Latest Payroll Snapshot Card */}
+        {/* 7. EMPLOYEE COMPENSATION & TASK SNAPSHOTS */}
         {/* ========================================================================= */}
         {!isHrAdmin && (
           <>
-            {/* Payroll Snapshot Card */}
+            {/* Latest Payslip Snapshot Card */}
             {latestPayroll && (
-              <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/payroll')}>
-                <View style={styles.widgetHeader}>
-                  <View style={[styles.widgetIconBox, { backgroundColor: '#EBFBEE' }]}>
-                    <Ionicons name="card" size={20} color={theme.colors.success} />
+              <TouchableOpacity
+                style={styles.snapshotCard}
+                onPress={() => router.push('/payroll')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.snapshotTop}>
+                  <View style={[styles.snapshotIconBox, { backgroundColor: '#ECFDF5' }]}>
+                    <Ionicons name="card" size={20} color={COLORS.success} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.widgetTitle}>My Latest Payslip ({formatMonthLabel(latestPayroll.month || latestPayroll.payrollMonth)})</Text>
-                    <Text style={styles.widgetSubtitle}>
-                      Net Take-Home: {formatCurrency(latestPayroll.netSalary)} • Ref: {latestPayroll.id}
+                    <Text style={styles.snapshotTitle}>
+                      Latest Payslip • {formatMonthLabel(latestPayroll.month || latestPayroll.payrollMonth)}
+                    </Text>
+                    <Text style={styles.snapshotSub}>
+                      Net Take-Home: <Text style={styles.boldText}>{formatCurrency(latestPayroll.netSalary)}</Text> • ID: {latestPayroll.id}
                     </Text>
                   </View>
                   <Badge
@@ -357,19 +511,27 @@ export default function DashboardScreen() {
                     size="sm"
                   />
                 </View>
-              </Card>
+                <View style={styles.snapshotFooter}>
+                  <Text style={styles.snapshotActionLink}>View Full Payslip Breakdown</Text>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                </View>
+              </TouchableOpacity>
             )}
 
-            {/* Task Snapshot Card */}
-            <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/tasks')}>
-              <View style={styles.widgetHeader}>
-                <View style={[styles.widgetIconBox, { backgroundColor: theme.colors.primarySubtle }]}>
-                  <Ionicons name="checkbox" size={20} color={theme.colors.primary} />
+            {/* Task Performance Snapshot */}
+            <TouchableOpacity
+              style={styles.snapshotCard}
+              onPress={() => router.push('/tasks')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.snapshotTop}>
+                <View style={[styles.snapshotIconBox, { backgroundColor: '#EFF6FF' }]}>
+                  <Ionicons name="checkbox" size={20} color={COLORS.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.widgetTitle}>My Active Tasks</Text>
-                  <Text style={styles.widgetSubtitle}>
-                    {pendingTasksCount} tasks in progress • {empTaskStats.overdue} overdue
+                  <Text style={styles.snapshotTitle}>My Active Tasks & Sprint</Text>
+                  <Text style={styles.snapshotSub}>
+                    {pendingTasksCount} in progress • {empTaskStats.overdue} overdue
                   </Text>
                 </View>
                 <Badge
@@ -378,18 +540,25 @@ export default function DashboardScreen() {
                   size="sm"
                 />
               </View>
-            </Card>
+              <View style={styles.snapshotProgressTrack}>
+                <View style={[styles.snapshotProgressFill, { width: `${Math.min(100, Math.max(0, empTaskStats.completionRate))}%` }]} />
+              </View>
+            </TouchableOpacity>
 
-            {/* Latest Leave Application Status */}
+            {/* Leave Request Snapshot */}
             {latestLeaveRequest && (
-              <Card style={styles.widgetCard} variant="elevated" padding="md" onPress={() => router.push('/leave')}>
-                <View style={styles.widgetHeader}>
-                  <View style={[styles.widgetIconBox, { backgroundColor: theme.colors.infoSubtle }]}>
-                    <Ionicons name="calendar" size={20} color={theme.colors.info} />
+              <TouchableOpacity
+                style={styles.snapshotCard}
+                onPress={() => router.push('/leave')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.snapshotTop}>
+                  <View style={[styles.snapshotIconBox, { backgroundColor: '#FFFBEB' }]}>
+                    <Ionicons name="calendar" size={20} color="#D97706" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.widgetTitle}>Latest Leave Request</Text>
-                    <Text style={styles.widgetSubtitle}>
+                    <Text style={styles.snapshotTitle}>Recent Leave Application</Text>
+                    <Text style={styles.snapshotSub}>
                       {latestLeaveRequest.leaveType} • {latestLeaveRequest.days}d ({latestLeaveRequest.startDate})
                     </Text>
                   </View>
@@ -399,198 +568,40 @@ export default function DashboardScreen() {
                     size="sm"
                   />
                 </View>
-              </Card>
+              </TouchableOpacity>
             )}
           </>
         )}
 
-        {/* Attendance Highlight / Action Banner */}
-        <Card style={styles.attendanceBanner} variant="elevated" padding="lg">
-          <View style={styles.attendanceBannerHeader}>
-            <View style={styles.attendanceIconCircle}>
-              <Ionicons name="time" size={24} color={theme.colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.attendanceBannerTitle}>
-                {isHrAdmin ? 'Attendance Console' : "Today's Attendance"}
-              </Text>
-              <Text style={styles.attendanceBannerSub}>
-                {isHrAdmin
-                  ? `${adminStats.presentCount} Present • ${adminStats.lateCount} Late • ${adminStats.absentCount} Absent`
-                  : isCheckedOut
-                  ? `Shift completed (${employeeTodayRecord.workingHours} logged)`
-                  : isCheckedIn
-                  ? `Checked in at ${employeeTodayRecord.checkInFormatted} (Chicago Time)`
-                  : 'You have not checked in yet today'}
-              </Text>
-            </View>
-          </View>
-
-          <Button
-            title={
-              isHrAdmin
-                ? 'Open Attendance Console'
-                : !isCheckedIn
-                ? 'Check In Now'
-                : !isCheckedOut
-                ? 'Open Attendance / Check Out'
-                : 'View Attendance Records'
-            }
-            onPress={() => router.push('/(tabs)/attendance')}
-            variant={!isCheckedIn && !isHrAdmin ? 'primary' : 'outline'}
-            size="md"
-            rightIcon={
-              <Ionicons
-                name="arrow-forward"
-                size={18}
-                color={!isCheckedIn && !isHrAdmin ? theme.colors.textInverse : theme.colors.primary}
-              />
-            }
-            style={styles.attendanceBtn}
-          />
-        </Card>
-
-        {/* Quick Access Modules */}
+        {/* ========================================================================= */}
+        {/* 8. CORPORATE BULLETIN & ANNOUNCEMENT */}
+        {/* ========================================================================= */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Access Modules</Text>
+          <Text style={styles.sectionTitle}>Company Bulletin</Text>
+          <Badge label="Official" variant="neutral" size="sm" />
         </View>
 
-        <Card style={styles.actionsCard} variant="elevated" padding="md">
-          <View style={styles.actionButtonsRow}>
-            {/* Quick Action 1: Payroll */}
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => router.push('/payroll')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: '#EBFBEE' },
-                ]}
-              >
-                <Ionicons
-                  name="card-outline"
-                  size={24}
-                  color={theme.colors.success}
-                />
-              </View>
-              <Text style={styles.actionLabel}>{isHrAdmin ? 'Payroll' : 'My Payroll'}</Text>
-            </TouchableOpacity>
-
-            {/* Quick Action 2: Employees Directory */}
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => router.push('/employees')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: theme.colors.primarySubtle },
-                ]}
-              >
-                <Ionicons
-                  name="people-outline"
-                  size={24}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <Text style={styles.actionLabel}>Directory</Text>
-            </TouchableOpacity>
-
-            {/* Quick Action 3: Tasks */}
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => router.push('/tasks')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: theme.colors.infoSubtle },
-                ]}
-              >
-                <Ionicons
-                  name="checkbox-outline"
-                  size={24}
-                  color={theme.colors.info}
-                />
-              </View>
-              <Text style={styles.actionLabel}>Tasks</Text>
-            </TouchableOpacity>
-
-            {/* Quick Action 4: Leaves */}
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => router.push('/leave')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.actionIconBox,
-                  { backgroundColor: theme.colors.warningSubtle },
-                ]}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={24}
-                  color={theme.colors.warning}
-                />
-              </View>
-              <Text style={styles.actionLabel}>Leaves</Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
-
-        {/* Company Announcement Card */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Internal Announcement</Text>
-          <Badge label="New" variant="primary" size="sm" />
-        </View>
-
-        <Card style={styles.announcementCard} variant="elevated" padding="lg">
-          <View style={styles.announcementTop}>
-            <View style={styles.announcementIconBox}>
-              <Ionicons
-                name="megaphone"
-                size={20}
-                color={theme.colors.primary}
-              />
+        <View style={styles.bulletinCard}>
+          <View style={styles.bulletinTop}>
+            <View style={styles.bulletinIconBox}>
+              <Ionicons name="megaphone" size={18} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.announcementTitle}>
-                Payroll Management Active (Visartech)
-              </Text>
-              <Text style={styles.announcementDate}>Visartech Operations • Today</Text>
+              <Text style={styles.bulletinTitle}>WorkSphere HR Suite 2.0 Live</Text>
+              <Text style={styles.bulletinDate}>Visartech Operations • Chicago HQ</Text>
             </View>
           </View>
-          <Text style={styles.announcementBody}>
-            The Payroll Management module is now live! HR can generate monthly payroll runs, manage salary structures, and track disbursements. Employees can access their confidential payslips anytime.
+          <Text style={styles.bulletinBody}>
+            Attendance, Leave Applications, Employee Directory, Task Delivery, and Payroll Management are fully operational across all 6 Visartech technology team members.
           </Text>
-        </Card>
+        </View>
 
-        {/* Modules Navigation Shortcut */}
-        <Card
-          style={styles.roadmapCard}
-          variant="flat"
-          padding="lg"
-          onPress={() => router.push('/(tabs)/modules')}
-        >
-          <View style={styles.roadmapContent}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.roadmapTitle}>Explore All HR Architecture</Text>
-              <Text style={styles.roadmapSubtitle}>
-                5 operational modules with centralized employee records & local persistence
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={22}
-              color={theme.colors.primary}
-            />
-          </View>
-        </Card>
+        {/* Footer Note */}
+        <View style={styles.footerBrand}>
+          <Text style={styles.footerBrandText}>
+            WorkSphere Mobile • Visartech Digital Solutions Inc.
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -599,254 +610,352 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xxxl,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: 48,
   },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-    paddingTop: theme.spacing.xs,
+    marginBottom: SPACING.md,
+    paddingTop: SPACING.xs,
   },
   headerLeft: {
     flex: 1,
+    marginRight: SPACING.sm,
   },
-  dateText: {
-    fontSize: theme.typography.size.xs,
-    fontWeight: theme.typography.weight.semibold,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  brandBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  brandBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.primary,
     letterSpacing: 0.8,
   },
-  greetingText: {
-    fontSize: theme.typography.size.xxl,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textPrimary,
-    marginTop: 2,
-  },
-  companyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  companyName: {
-    fontSize: theme.typography.size.xs + 1,
-    fontWeight: theme.typography.weight.semibold,
-    color: theme.colors.primary,
-  },
-  bullet: {
-    marginHorizontal: 6,
-    color: theme.colors.textMuted,
-    fontSize: theme.typography.size.xs,
-  },
-  companyIndustry: {
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textSecondary,
-  },
-  roleBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.surface,
-  },
-  roleBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  roleInfo: {
-    marginLeft: theme.spacing.sm,
-  },
-  roleLabel: {
+  tzPill: {
     fontSize: 10,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textMuted,
+    fontWeight: '700',
+    color: COLORS.textMuted,
     letterSpacing: 0.5,
   },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.5,
+  },
+  greetingName: {
+    color: COLORS.primary,
+  },
+  userRoleSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  avatarWrap: {
+    padding: 2,
+  },
+  roleBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
+  },
+  roleBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  roleIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roleLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+  },
   roleTitle: {
-    fontSize: theme.typography.size.sm,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
-  switchBtn: {
-    paddingVertical: 6,
+  roleToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
     paddingHorizontal: 10,
-    minHeight: 32,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
-  switchBtnText: {
-    fontSize: theme.typography.size.xs,
+  roleToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   sectionTitle: {
-    fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: -0.2,
+  },
+  sectionSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   seeAllText: {
-    fontSize: theme.typography.size.xs + 1,
-    fontWeight: theme.typography.weight.semibold,
-    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
-  statsGrid: {
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  payrollSummaryGrid: {
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  statsRow: {
+  quickTilesRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
+    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: SPACING.lg,
   },
-  widgetCard: {
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-  },
-  widgetHeader: {
-    flexDirection: 'row',
+  quickTile: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
   },
-  widgetIconBox: {
+  tileIconBox: {
     width: 38,
     height: 38,
-    borderRadius: theme.radius.sm,
+    borderRadius: RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 6,
   },
-  widgetTitle: {
-    fontSize: theme.typography.size.sm,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textPrimary,
+  tileLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
-  widgetSubtitle: {
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  attendanceBanner: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.primaryLight,
-    borderWidth: 1,
-  },
-  attendanceBannerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  attendanceIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primarySubtle,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
-  attendanceBannerTitle: {
-    fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.textPrimary,
-  },
-  attendanceBannerSub: {
-    fontSize: theme.typography.size.xs + 1,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  attendanceBtn: {
-    width: '100%',
-  },
-  actionsCard: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  actionItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  actionIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: theme.radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  actionLabel: {
-    fontSize: theme.typography.size.xs,
-    fontWeight: theme.typography.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  announcementCard: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-  },
-  announcementTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  announcementIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.primarySubtle,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.sm,
-  },
-  announcementTitle: {
-    fontSize: theme.typography.size.sm + 1,
-    fontWeight: theme.typography.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  announcementDate: {
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textMuted,
+  tileSub: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontWeight: '600',
     marginTop: 1,
   },
-  announcementBody: {
-    fontSize: theme.typography.size.xs + 1,
-    color: theme.colors.textSecondary,
-    lineHeight: 18,
-  },
-  roadmapCard: {
-    backgroundColor: theme.colors.primarySubtle,
-    borderColor: theme.colors.primaryLight,
+  attendanceHeroCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.lg,
+    ...SHADOWS.sm,
   },
-  roadmapContent: {
+  attendanceHeroTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: SPACING.sm + 2,
   },
-  roadmapTitle: {
-    fontSize: theme.typography.size.sm + 1,
-    fontWeight: theme.typography.weight.bold,
-    color: theme.colors.primary,
+  attendanceHeroIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  roadmapSubtitle: {
-    fontSize: theme.typography.size.xs,
-    color: theme.colors.textSecondary,
+  attendanceHeroHeading: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  attendanceHeroSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  attendanceActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+  },
+  attendanceActionBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  kpiGrid: {
+    marginBottom: SPACING.md,
+    gap: SPACING.xs,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  payrollSection: {
+    marginBottom: SPACING.sm,
+  },
+  payrollGrid: {
+    gap: SPACING.xs,
+  },
+  snapshotCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  snapshotTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  snapshotIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  snapshotTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  snapshotSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  snapshotFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  snapshotActionLink: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  snapshotProgressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F1F5F9',
+    marginTop: SPACING.sm,
+    overflow: 'hidden',
+  },
+  snapshotProgressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 3,
+  },
+  bulletinCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  bulletinTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: SPACING.xs,
+  },
+  bulletinIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.sm,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bulletinTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  bulletinDate: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  bulletinBody: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  footerBrand: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  footerBrandText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: '600',
   },
 });
