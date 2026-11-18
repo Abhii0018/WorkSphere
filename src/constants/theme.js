@@ -181,6 +181,7 @@ export const COLORS = colors;
 export const SPACING = spacing;
 export const TYPOGRAPHY = typography;
 export const RADIUS = borderRadius;
+export const radius = borderRadius;
 export const SHADOWS = shadows;
 
 export const theme = {
@@ -188,6 +189,7 @@ export const theme = {
   spacing,
   typography,
   borderRadius,
+  radius: borderRadius,
   shadows,
 };
 

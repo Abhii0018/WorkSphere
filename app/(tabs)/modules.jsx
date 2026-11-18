@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.primarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.xl,
     elevation: 8,
     shadowColor: '#000',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   modalIconBox: {
     width: 52,
     height: 52,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.primarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.borderRadius.sm,
   },
   roadmapHeading: {
     fontSize: theme.typography.size.xs + 1,

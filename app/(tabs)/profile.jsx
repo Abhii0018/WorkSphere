@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   companyIconBox: {
     width: 48,
     height: 48,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.borderRadius.md,
     backgroundColor: theme.colors.primarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   settingsIconBox: {
     width: 36,
     height: 36,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.borderRadius.sm,
     backgroundColor: theme.colors.primarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
